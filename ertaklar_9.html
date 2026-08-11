@@ -1,0 +1,2545 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ertaklar.uz — Shaxsiy ertak kitoblar</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<style>html,body{margin:0;padding:0}</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const { useState, useMemo, useEffect, useRef } = React;
+/* =========================================================================
+   ERTAKLAR.UZ — Personalized children's storybooks
+   ------------------------------------------------------------------------
+   To rename the brand: change BRAND below. One place, used everywhere.
+   Content (BOOKS) is placeholder — swap title/desc/price/cover later.
+   Flow: Home -> Catalog -> Book -> Personalize wizard -> Cart -> Checkout
+   Responsive: fluid type via clamp(); breakpoints at 1024 / 768 / 520.
+   ========================================================================= */
+
+const BRAND = "Ertaklar"; // <- change site name here
+const BRAND_DOMAIN = "Ertaklar.uz";
+const PHONE = "+998 90 123 45 67"; // <- change phone here
+
+/* ----------------------------- Supabase config ------------------------- */
+const SUPABASE_URL = "https://ygcvmvqhefhjsavildfe.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnY3ZtdnFoZWZoanNhdmlsZGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTg5NjQsImV4cCI6MjA5NjkzNDk2NH0.yhR8jl1DlkTu-EvvZda-5q_xoOlraMb-Z6vcFUhphvs";
+
+/* Minimal Supabase REST helpers (no SDK needed) */
+const sbHeaders = {
+  apikey: SUPABASE_ANON,
+  Authorization: `Bearer ${SUPABASE_ANON}`,
+  "Content-Type": "application/json"
+};
+async function sbSelect(table, query = "") {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+    headers: sbHeaders
+  });
+  if (!res.ok) throw new Error(`select ${table} failed: ${res.status}`);
+  return res.json();
+}
+async function sbInsert(table, row) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: "POST",
+    headers: {
+      ...sbHeaders,
+      Prefer: "return=minimal"
+    },
+    body: JSON.stringify(row)
+  });
+  if (!res.ok) throw new Error(`insert ${table} failed: ${res.status} ${await res.text()}`);
+  return true;
+}
+async function sbUploadPhoto(file) {
+  const path = `orders/${Date.now()}_${Math.random().toString(36).slice(2)}.${file.name.split(".").pop() || "jpg"}`;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/photos/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON,
+      Authorization: `Bearer ${SUPABASE_ANON}`,
+      "Content-Type": file.type || "image/jpeg"
+    },
+    body: file
+  });
+  if (!res.ok) throw new Error(`upload failed: ${res.status}`);
+  return `${SUPABASE_URL}/storage/v1/object/public/photos/${path}`;
+}
+
+/* ----------------------------- Supabase Auth --------------------------- */
+function getToken() {
+  try {
+    return JSON.parse(localStorage.getItem("ert_admin") || "null")?.access_token || null;
+  } catch {
+    return null;
+  }
+}
+function getRefresh() {
+  try {
+    return JSON.parse(localStorage.getItem("ert_admin") || "null")?.refresh_token || null;
+  } catch {
+    return null;
+  }
+}
+function authHeaders() {
+  const tok = getToken();
+  return {
+    apikey: SUPABASE_ANON,
+    Authorization: `Bearer ${tok || SUPABASE_ANON}`,
+    "Content-Type": "application/json"
+  };
+}
+async function sbLogin(email, password) {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      email,
+      password
+    })
+  });
+  if (!res.ok) throw new Error("login_failed");
+  const data = await res.json();
+  try {
+    localStorage.setItem("ert_admin", JSON.stringify(data));
+  } catch {}
+  return data;
+}
+// Login muddati tugasa, refresh_token bilan yangilaydi
+async function sbRefresh() {
+  const rt = getRefresh();
+  if (!rt) return false;
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      refresh_token: rt
+    })
+  });
+  if (!res.ok) return false;
+  const data = await res.json();
+  try {
+    localStorage.setItem("ert_admin", JSON.stringify(data));
+  } catch {}
+  return true;
+}
+function sbLogout() {
+  try {
+    localStorage.removeItem("ert_admin");
+  } catch {}
+}
+function isAdmin() {
+  return !!getToken();
+}
+
+// 401 (JWT expired) bo'lsa avtomatik refresh qilib qayta uradi
+async function authFetch(url, opts = {}) {
+  let res = await fetch(url, {
+    ...opts,
+    headers: {
+      ...authHeaders(),
+      ...(opts.headers || {})
+    }
+  });
+  if (res.status === 401) {
+    const ok = await sbRefresh();
+    if (ok) {
+      res = await fetch(url, {
+        ...opts,
+        headers: {
+          ...authHeaders(),
+          ...(opts.headers || {})
+        }
+      });
+    }
+  }
+  return res;
+}
+async function sbAuthSelect(table, query = "") {
+  const res = await authFetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`);
+  if (!res.ok) throw new Error(`select ${table} failed: ${res.status}`);
+  return res.json();
+}
+async function sbAuthInsert(table, row) {
+  const res = await authFetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: "POST",
+    headers: {
+      Prefer: "return=minimal"
+    },
+    body: JSON.stringify(row)
+  });
+  if (!res.ok) throw new Error(`insert ${table} failed: ${res.status} ${await res.text()}`);
+  return true;
+}
+async function sbAuthUpdate(table, id, patch) {
+  const res = await authFetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method: "PATCH",
+    headers: {
+      Prefer: "return=minimal"
+    },
+    body: JSON.stringify(patch)
+  });
+  if (!res.ok) throw new Error(`update ${table} failed: ${res.status}`);
+  return true;
+}
+async function sbAuthDelete(table, id) {
+  const res = await authFetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method: "DELETE"
+  });
+  if (!res.ok) throw new Error(`delete ${table} failed: ${res.status}`);
+  return true;
+}
+async function sbUploadCover(file) {
+  const path = `covers/${Date.now()}_${Math.random().toString(36).slice(2)}.${file.name.split(".").pop() || "jpg"}`;
+  const doUpload = () => fetch(`${SUPABASE_URL}/storage/v1/object/photos/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON,
+      Authorization: `Bearer ${getToken() || SUPABASE_ANON}`,
+      "Content-Type": file.type || "image/jpeg"
+    },
+    body: file
+  });
+  let res = await doUpload();
+  if (res.status === 401 && (await sbRefresh())) res = await doUpload();
+  if (!res.ok) throw new Error(`cover upload failed: ${res.status}`);
+  return `${SUPABASE_URL}/storage/v1/object/public/photos/${path}`;
+}
+async function sbUploadFile(file, folder = "books") {
+  const ext = file.name.split(".").pop() || "pdf";
+  const path = `${folder}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const doUpload = () => fetch(`${SUPABASE_URL}/storage/v1/object/photos/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON,
+      Authorization: `Bearer ${getToken() || SUPABASE_ANON}`,
+      "Content-Type": file.type || "application/octet-stream"
+    },
+    body: file
+  });
+  let res = await doUpload();
+  if (res.status === 401 && (await sbRefresh())) res = await doUpload();
+  if (!res.ok) throw new Error(`file upload failed: ${res.status}`);
+  return `${SUPABASE_URL}/storage/v1/object/public/photos/${path}`;
+}
+
+/* ----------------------------- i18n strings ---------------------------- */
+const T = {
+  uz: {
+    nav_home: "Bosh sahifa",
+    nav_books: "Kitoblar",
+    nav_how: "Qanday ishlaydi",
+    nav_support: "Yordam",
+    hero_eyebrow: "Shaxsiy ertak kitob yarating",
+    hero_title: "O‘zingiz qahramon bo‘lgan sehrli ertaklar",
+    hero_sub: "Kitobni tanlang, bolangizning ismi va suratini yuklang — biz uni hikoyaning bosh qahramoniga aylantiramiz.",
+    hero_cta: "Bepul sinab ko‘rish",
+    hero_cta2: "Barcha kitoblar",
+    badge_top: "TOP",
+    badge_new: "YANGI",
+    section_best: "Eng ko‘p tanlangan",
+    section_best_sub: "Bestseller kitoblarni shaxsiylashtiring",
+    section_new: "Yangi kitoblar",
+    section_new_sub: "Yangiliklarni kashf eting",
+    section_girls: "Qizlar uchun",
+    section_boys: "O‘g‘il bolalar uchun",
+    section_age: "Yoshga qarab tanlang",
+    view_all: "Hammasi",
+    how_eyebrow: "Bir necha daqiqada tayyor",
+    how_title: "Bu qanday ishlaydi",
+    how_1_t: "Ertakni tanlang",
+    how_1_d: "Kutubxonadan yoqqan hikoyani tanlang.",
+    how_2_t: "Surat yuklang",
+    how_2_d: "Bolangizning ismi, yoshi va suratini kiriting.",
+    how_3_t: "Ko‘rib chiqing",
+    how_3_d: "Tayyor kitobni oldindan ko‘ring va tasdiqlang.",
+    how_4_t: "Yetkazib beramiz",
+    how_4_d: "Mehr bilan chop etib, uyingizgacha yetkazamiz.",
+    faces_eyebrow: "Yuz, ifoda va burchaklarni sozlash",
+    faces_title: "Qahramoningizni jonlantiramiz",
+    faces_1: "Turli uslublar",
+    faces_2: "Boy ifodalar",
+    faces_3: "Har xil burchaklar",
+    career_eyebrow: "Katta orzular uchun ertaklar",
+    career_title: "Bolangizning orzu kasbini ilhomlantiring",
+    career_doc: "Shifokor",
+    career_pilot: "Uchuvchi",
+    career_fire: "O‘t o‘chiruvchi",
+    career_police: "Politsiyachi",
+    age_2_4: "2–4 yosh",
+    age_4_6: "4–6 yosh",
+    age_6_8: "6–8 yosh",
+    discover: "Ko‘rish",
+    from: "dan",
+    personalise: "Shaxsiylashtirish",
+    book_age: "Yosh",
+    book_lang: "Til",
+    book_pages: "Sahifalar",
+    wizard_title: "Kitobni shaxsiylashtiring",
+    step: "Qadam",
+    of: "/",
+    w_name: "Bolaning ismi",
+    w_name_ph: "Masalan, Amir",
+    w_gender: "Jinsi",
+    w_boy: "O‘g‘il bola",
+    w_girl: "Qiz bola",
+    w_age: "Yoshi",
+    w_age_q: "Bolaning yoshi nechada?",
+    w_photo: "Suratni yuklang",
+    w_photo_hint: "Aniq, yorug‘, yuzi ko‘rinib turgan surat tavsiya etiladi.",
+    w_photo_drop: "Suratni shu yerga tashlang yoki tanlang",
+    w_lang: "Kitob tili",
+    w_dedication: "Bag‘ishlov",
+    w_optional: "ixtiyoriy",
+    w_dedication_ph: "Sevimli Amirimizga, 5 yoshing muborak!",
+    w_preview: "Ko‘rib chiqish",
+    next: "Keyingi",
+    back: "Orqaga",
+    preview_title: "Tayyor ko‘rinish",
+    preview_note: "Bu — namunaviy ko‘rinish. Buyurtmadan so‘ng yakuniy kitob tayyorlanadi va tasdiqlash uchun yuboriladi.",
+    locked_title: "Buyurtma bering va to‘liq kitobni oching",
+    locked_pages: "ta bet yopiq",
+    order_now: "Hoziroq buyurtma berish",
+    add_and_cart: "Savatga qo‘shish",
+    cart_title: "Savat",
+    cart_empty: "Savat hozircha bo‘sh",
+    cart_empty_cta: "Kitoblarni ko‘rish",
+    cart_for: "Kim uchun:",
+    cart_remove: "O‘chirish",
+    subtotal: "Jami",
+    checkout: "Buyurtma berish",
+    co_title: "Buyurtma ma’lumotlari",
+    co_name: "Ism familiya",
+    co_phone: "Telefon raqam",
+    co_addr: "Yetkazib berish manzili",
+    co_city: "Shahar",
+    co_pay: "To‘lov usuli",
+    co_cash: "Naqd",
+    co_place: "Buyurtmani tasdiqlash",
+    co_done_t: "Buyurtmangiz qabul qilindi!",
+    co_done_d: "Tez orada operatorimiz bog‘lanadi va kitob ko‘rinishini tasdiqlash uchun yuboradi.",
+    co_back_home: "Bosh sahifaga",
+    currency: "so‘m",
+    lang_switch: "RU",
+    footer_tag: "Farzandingizni o‘z ertagining qahramoniga aylantiring.",
+    footer_nav: "Bo‘limlar",
+    footer_contact: "Aloqa",
+    age_unit: "yosh",
+    faq_title: "Ko‘p so‘raladigan savollar",
+    faq: [["Buyurtma qanday beriladi?", "Kitobni tanlaysiz, bola ismi, yoshi va suratini kiritasiz, oldindan ko‘rasiz va tasdiqlaysiz. So‘ng to‘lovni amalga oshirasiz."], ["Qaysi tillarda mavjud?", "Hozircha o‘zbek va rus tillarida. Tez orada boshqa tillar ham qo‘shiladi."], ["Yetkazib berish qancha vaqt oladi?", "Odatda 5–10 ish kuni. Shahar va hududga qarab farq qilishi mumkin."], ["Surat qanday bo‘lishi kerak?", "Aniq, yorug‘, yuzi to‘liq ko‘rinib turgan surat. Shunday surat eng yaxshi natija beradi."]]
+  },
+  ru: {
+    nav_home: "Главная",
+    nav_books: "Книги",
+    nav_how: "Как это работает",
+    nav_support: "Помощь",
+    hero_eyebrow: "Создайте персональную сказку",
+    hero_title: "Волшебные сказки, где герой — ваш ребёнок",
+    hero_sub: "Выберите книгу, загрузите имя и фото ребёнка — мы сделаем его главным героем истории.",
+    hero_cta: "Попробовать бесплатно",
+    hero_cta2: "Все книги",
+    badge_top: "ХИТ",
+    badge_new: "НОВОЕ",
+    section_best: "Бестселлеры",
+    section_best_sub: "Персонализируйте любимые сказки",
+    section_new: "Новинки",
+    section_new_sub: "Откройте новые истории",
+    section_girls: "Для девочек",
+    section_boys: "Для мальчиков",
+    section_age: "Выбор по возрасту",
+    view_all: "Все",
+    how_eyebrow: "Готово за пару минут",
+    how_title: "Как это работает",
+    how_1_t: "Выберите сказку",
+    how_1_d: "Подберите историю из библиотеки.",
+    how_2_t: "Загрузите фото",
+    how_2_d: "Укажите имя, возраст и фото ребёнка.",
+    how_3_t: "Посмотрите",
+    how_3_d: "Предпросмотр готовой книги и подтверждение.",
+    how_4_t: "Доставим",
+    how_4_d: "Печатаем с любовью и доставляем до двери.",
+    faces_eyebrow: "Настройка лица, эмоций и ракурсов",
+    faces_title: "Оживляем вашего героя",
+    faces_1: "Разные стили",
+    faces_2: "Богатые эмоции",
+    faces_3: "Разные ракурсы",
+    career_eyebrow: "Сказки для больших мечтаний",
+    career_title: "Вдохновите ребёнка на профессию мечты",
+    career_doc: "Врач",
+    career_pilot: "Пилот",
+    career_fire: "Пожарный",
+    career_police: "Полицейский",
+    age_2_4: "2–4 года",
+    age_4_6: "4–6 лет",
+    age_6_8: "6–8 лет",
+    discover: "Смотреть",
+    from: "от",
+    personalise: "Персонализировать",
+    book_age: "Возраст",
+    book_lang: "Язык",
+    book_pages: "Страниц",
+    wizard_title: "Персонализация книги",
+    step: "Шаг",
+    of: "из",
+    w_name: "Имя ребёнка",
+    w_name_ph: "Например, Амир",
+    w_gender: "Пол",
+    w_boy: "Мальчик",
+    w_girl: "Девочка",
+    w_age: "Возраст",
+    w_age_q: "Сколько лет ребёнку?",
+    w_photo: "Загрузите фото",
+    w_photo_hint: "Рекомендуется чёткое, светлое фото с открытым лицом.",
+    w_photo_drop: "Перетащите фото сюда или выберите",
+    w_lang: "Язык книги",
+    w_dedication: "Посвящение",
+    w_optional: "необязательно",
+    w_dedication_ph: "Любимому Амиру, с 5-летием!",
+    w_preview: "Предпросмотр",
+    next: "Далее",
+    back: "Назад",
+    preview_title: "Предпросмотр",
+    preview_note: "Это примерный вид. После заказа финальная книга готовится и отправляется на подтверждение.",
+    locked_title: "Оформите заказ и откройте всю книгу",
+    locked_pages: "стр. закрыто",
+    order_now: "Заказать сейчас",
+    add_and_cart: "В корзину",
+    cart_title: "Корзина",
+    cart_empty: "Корзина пока пуста",
+    cart_empty_cta: "Смотреть книги",
+    cart_for: "Для кого:",
+    cart_remove: "Удалить",
+    subtotal: "Итого",
+    checkout: "Оформить заказ",
+    co_title: "Данные заказа",
+    co_name: "Имя и фамилия",
+    co_phone: "Номер телефона",
+    co_addr: "Адрес доставки",
+    co_city: "Город",
+    co_pay: "Способ оплаты",
+    co_cash: "Наличные",
+    co_place: "Подтвердить заказ",
+    co_done_t: "Заказ принят!",
+    co_done_d: "Скоро с вами свяжется оператор и пришлёт вид книги на подтверждение.",
+    co_back_home: "На главную",
+    currency: "сум",
+    lang_switch: "UZ",
+    footer_tag: "Сделайте ребёнка героем его собственной сказки.",
+    footer_nav: "Разделы",
+    footer_contact: "Контакты",
+    age_unit: "лет",
+    faq_title: "Частые вопросы",
+    faq: [["Как оформить заказ?", "Выберите книгу, укажите имя, возраст и фото ребёнка, посмотрите предпросмотр и подтвердите. Затем оплатите заказ."], ["На каких языках доступно?", "Пока на узбекском и русском. Скоро добавим другие языки."], ["Сколько занимает доставка?", "Обычно 5–10 рабочих дней. Зависит от города и региона."], ["Каким должно быть фото?", "Чёткое, светлое, с полностью открытым лицом. Такое фото даёт лучший результат."]]
+  }
+};
+
+/* ----------------------------- demo catalog (fallback if DB empty) ----- */
+const DEMO_BOOKS = [{
+  id: "dragon",
+  title: {
+    uz: "Botir va Ajdaho",
+    ru: "Батыр и Дракон"
+  },
+  desc: {
+    uz: "Mehribonlik qo‘rqinchli ajdahoni do‘stga aylantiradi.",
+    ru: "Доброта превращает страшного дракона в друга."
+  },
+  price: 149000,
+  age: "3–6",
+  pages: 24,
+  badge: "best",
+  gender: "boy",
+  hue: 262,
+  emoji: "🐉"
+}, {
+  id: "stars",
+  title: {
+    uz: "Kosmik Sayohat",
+    ru: "Космическое путешествие"
+  },
+  desc: {
+    uz: "Yulduzlar orasida uxlash oldidan sayohat.",
+    ru: "Путешествие среди звёзд перед сном."
+  },
+  price: 149000,
+  age: "2–5",
+  pages: 20,
+  badge: "best",
+  gender: "boy",
+  hue: 230,
+  emoji: "🚀"
+}, {
+  id: "fairy",
+  title: {
+    uz: "Yo‘qolgan Pari Qanotlari",
+    ru: "Потерянные крылья феи"
+  },
+  desc: {
+    uz: "Sehrga ishon: parining sarguzashti.",
+    ru: "Поверь в чудо: приключение феи."
+  },
+  price: 149000,
+  age: "4–7",
+  pages: 28,
+  badge: "new",
+  gender: "girl",
+  hue: 320,
+  emoji: "🧚"
+}, {
+  id: "zoo",
+  title: {
+    uz: "Hayvonot Bog‘ida",
+    ru: "В зоопарке"
+  },
+  desc: {
+    uz: "Hayvonlar bilan tanishuv va o‘yin.",
+    ru: "Знакомство и игра с животными."
+  },
+  price: 139000,
+  age: "2–4",
+  pages: 20,
+  badge: "new",
+  gender: "girl",
+  hue: 150,
+  emoji: "🦁"
+}, {
+  id: "abc",
+  title: {
+    uz: "Alifbo Sayohati",
+    ru: "Путешествие по алфавиту"
+  },
+  desc: {
+    uz: "Harflarni o‘ynab o‘rganamiz.",
+    ru: "Учим буквы играя."
+  },
+  price: 139000,
+  age: "3–6",
+  pages: 26,
+  badge: null,
+  gender: "girl",
+  hue: 28,
+  emoji: "🔤"
+}, {
+  id: "race",
+  title: {
+    uz: "G‘alaba Poygasi",
+    ru: "Гонка к победе"
+  },
+  desc: {
+    uz: "Ishon, harakat qil, yut!",
+    ru: "Верь, старайся, побеждай!"
+  },
+  price: 149000,
+  age: "4–7",
+  pages: 24,
+  badge: null,
+  gender: "boy",
+  hue: 8,
+  emoji: "🏎️"
+}, {
+  id: "robot",
+  title: {
+    uz: "Unutilgan Robot",
+    ru: "Забытый робот"
+  },
+  desc: {
+    uz: "Yangi do‘st bilan koinot sirlari.",
+    ru: "Тайны космоса с новым другом."
+  },
+  price: 149000,
+  age: "5–8",
+  pages: 28,
+  badge: null,
+  gender: "boy",
+  hue: 190,
+  emoji: "🤖"
+}, {
+  id: "forest",
+  title: {
+    uz: "O‘rmon Do‘stlari",
+    ru: "Лесные друзья"
+  },
+  desc: {
+    uz: "Raqamlarni o‘rmonda sanaymiz.",
+    ru: "Считаем числа в лесу."
+  },
+  price: 139000,
+  age: "2–5",
+  pages: 22,
+  badge: null,
+  gender: "girl",
+  hue: 110,
+  emoji: "🦊"
+}];
+const fmtPrice = n => n.toLocaleString("ru-RU").replace(/,/g, " ");
+const coverStyle = hue => ({
+  background: `linear-gradient(160deg, hsl(${hue} 70% 92%), hsl(${hue} 60% 80%))`
+});
+const darkCoverStyle = hue => ({
+  background: `linear-gradient(160deg, hsl(${hue} 55% 42%), hsl(${hue} 60% 26%))`,
+  color: "#fff"
+});
+
+/* ------------------------------- styles -------------------------------- */
+const CSS = `
+:root{
+  --ink:#1b1633; --ink-soft:#4a4368; --paper:#fbf8f3; --cream:#f3ecde;
+  --night:#211a45; --night-2:#2c2358; --gold:#f4b740; --gold-deep:#e09a1f;
+  --violet:#6c5ce7; --violet-deep:#5a48d6; --line:rgba(33,26,69,.10);
+  --radius:18px; --radius-sm:12px;
+  --shadow:0 10px 30px rgba(33,26,69,.10); --shadow-lg:0 24px 60px rgba(33,26,69,.18);
+}
+*{box-sizing:border-box}
+.ert{font-family:'Baloo 2','Nunito',ui-rounded,system-ui,sans-serif;color:var(--ink);background:var(--paper);min-height:100vh;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.ert h1,.ert h2,.ert h3{font-family:'Baloo 2',sans-serif;font-weight:700;letter-spacing:-.01em;margin:0;overflow-wrap:break-word}
+.ert p{margin:0;line-height:1.6;overflow-wrap:break-word}
+.ert button{font-family:inherit;cursor:pointer;border:none;background:none}
+.ert a{color:inherit;text-decoration:none}
+.wrap{max-width:1140px;margin:0 auto;padding:0 clamp(16px,4vw,22px);width:100%}
+
+/* header */
+.hd{position:sticky;top:0;z-index:50;background:rgba(251,248,243,.88);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.hd-in{display:flex;align-items:center;gap:clamp(10px,2vw,24px);height:66px}
+.logo{display:flex;align-items:center;gap:9px;font-family:'Baloo 2';font-weight:800;font-size:clamp(19px,3vw,22px);cursor:pointer;white-space:nowrap}
+.logo-star{width:30px;height:30px;display:grid;place-items:center;background:var(--night);border-radius:9px;color:var(--gold);font-size:17px;flex-shrink:0}
+.nav{display:flex;gap:4px;margin-left:8px}
+.nav button{padding:9px 13px;border-radius:10px;font-weight:600;font-size:15px;color:var(--ink-soft);white-space:nowrap}
+.nav button:hover{background:var(--cream);color:var(--ink)}
+.nav button.on{color:var(--violet-deep)}
+.hd-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.lang-btn{padding:8px 12px;border-radius:10px;font-weight:700;font-size:14px;border:1px solid var(--line);color:var(--ink-soft)}
+.lang-btn:hover{background:var(--cream)}
+.cart-btn{position:relative;width:42px;height:42px;border-radius:11px;background:var(--night);color:#fff;display:grid;place-items:center;font-size:18px}
+.cart-badge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 5px;background:var(--gold);color:var(--night);border-radius:10px;font-size:12px;font-weight:800;display:grid;place-items:center}
+
+/* hero — full-bleed, large, WonderWraps-style */
+.hero{position:relative;overflow:hidden;
+  background:
+   radial-gradient(900px 600px at 18% 30%, #4c3aa6, transparent 70%),
+   radial-gradient(1000px 700px at 90% 70%, #7a52d4, transparent 70%),
+   linear-gradient(135deg,#3a2c82,#6c5ce7)}
+.hero-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:clamp(24px,4vw,56px);align-items:center;
+  min-height:clamp(440px,60vh,640px);padding:clamp(36px,5vw,60px) 0}
+.hero-copy{max-width:560px}
+.eyebrow{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:clamp(13px,1.5vw,15px);color:#fff;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);padding:8px 15px;border-radius:999px;letter-spacing:.04em;text-transform:uppercase}
+.hero h1{font-size:clamp(34px,5.6vw,64px);line-height:1.04;margin:18px 0 0;color:#fff}
+.hero h1 .g{color:var(--gold)}
+.hero-sub{font-size:clamp(16px,1.9vw,20px);color:rgba(255,255,255,.82);max-width:30em;margin-top:18px;line-height:1.55}
+.hero-cta{display:flex;gap:14px;margin-top:30px;flex-wrap:wrap}
+.hero .btn-ghost{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3)}
+.hero .btn-ghost:hover{background:rgba(255,255,255,.2)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:700;font-size:clamp(15px,2vw,16px);padding:13px clamp(16px,3vw,22px);border-radius:14px;transition:transform .12s ease, box-shadow .2s ease;white-space:nowrap}
+.btn:active{transform:translateY(1px)}
+.btn-pri{background:var(--gold);color:var(--night);box-shadow:0 8px 22px rgba(224,154,31,.35)}
+.btn-pri:hover{box-shadow:0 12px 28px rgba(224,154,31,.45)}
+.btn-ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.btn-ghost:hover{background:var(--cream)}
+.btn-dark{background:var(--night);color:#fff}
+.btn-dark:hover{background:var(--night-2)}
+.btn-block{width:100%}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+
+/* hero motion — large tilted storybook */
+.hero-motion{position:relative;display:grid;place-items:center;min-height:clamp(340px,46vw,520px)}
+.motion-stage{position:relative;width:clamp(280px,40vw,460px);height:clamp(330px,48vw,540px);transform:rotate(-7deg)}
+.mbook{position:absolute;inset:0;border-radius:18px;box-shadow:0 40px 80px rgba(0,0,0,.45);overflow:hidden;display:grid;place-items:center;border:6px solid rgba(255,255,255,.08)}
+.mbook .scene{position:absolute;inset:0;display:grid;place-items:center;font-size:clamp(120px,20vw,240px);opacity:0;animation:sceneCycle 12s infinite}
+.mbook .scene:nth-child(1){animation-delay:0s}
+.mbook .scene:nth-child(2){animation-delay:4s}
+.mbook .scene:nth-child(3){animation-delay:8s}
+@keyframes sceneCycle{0%{opacity:0;transform:scale(1.06)}4%{opacity:1;transform:scale(1)}30%{opacity:1}34%{opacity:0}100%{opacity:0}}
+.mbook .title-top{position:absolute;top:26px;left:0;right:0;text-align:center;color:rgba(255,255,255,.92);font-family:'Baloo 2';font-weight:700;font-size:clamp(15px,2.2vw,22px);text-shadow:0 2px 8px rgba(0,0,0,.4);padding:0 18px}
+/* child photo morphs into hero badge */
+.morph{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.95);border-radius:14px;padding:9px 16px 9px 9px;box-shadow:var(--shadow);white-space:nowrap}
+.morph .ph{width:clamp(44px,6vw,56px);height:clamp(44px,6vw,56px);border-radius:11px;background:linear-gradient(135deg,#cdbff5,#f4d089);overflow:hidden;display:grid;place-items:center;font-size:clamp(24px,3.5vw,30px);animation:flip 12s infinite}
+@keyframes flip{0%,46%{filter:saturate(.7) brightness(1)}50%,96%{filter:saturate(1.2) brightness(1.05)}}
+.morph .arw{color:var(--violet-deep);font-size:clamp(16px,2.5vw,20px);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:translateX(0)}50%{transform:translateX(3px)}}
+.morph .nm{font-weight:800;font-size:clamp(15px,2.2vw,18px);color:var(--night)}
+.spark{position:absolute;color:var(--gold);font-size:clamp(18px,2.5vw,26px);animation:tw 3s ease-in-out infinite;z-index:2}
+@keyframes tw{0%,100%{opacity:.3;scale:.8}50%{opacity:1;scale:1.15}}
+
+/* sections */
+.sec{padding:clamp(36px,6vw,54px) 0}
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:clamp(18px,3vw,26px)}
+.sec-head .eye{font-weight:700;color:var(--gold-deep);font-size:clamp(12px,1.8vw,14px);text-transform:uppercase;letter-spacing:.07em}
+.sec-head h2{font-size:clamp(22px,3.6vw,34px);margin-top:6px}
+.sec-head p{color:var(--ink-soft);margin-top:4px;font-size:clamp(14px,2vw,16px)}
+.link-all{font-weight:700;color:var(--violet-deep);white-space:nowrap;font-size:clamp(14px,2vw,16px)}
+.link-all:hover{text-decoration:underline}
+
+/* book grid — auto-fit so it never overflows on any screen */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:clamp(12px,2vw,22px)}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;transition:transform .15s ease, box-shadow .2s ease;cursor:pointer}
+.card:hover{transform:translateY(-5px);box-shadow:var(--shadow-lg)}
+.cover{aspect-ratio:4/5;display:grid;place-items:center;font-size:clamp(48px,9vw,74px);position:relative}
+.cover .badge{position:absolute;top:12px;left:12px;font-weight:800;font-size:12px;padding:5px 10px;border-radius:999px;color:#fff}
+.badge.best{background:var(--gold-deep)}
+.badge.new{background:var(--violet)}
+.card-b{padding:14px 15px 17px;display:flex;flex-direction:column;gap:6px;flex:1}
+.card-b h3{font-size:clamp(16px,2.4vw,18px)}
+.card-b .d{color:var(--ink-soft);font-size:clamp(13px,1.9vw,14px);flex:1}
+.card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;flex-wrap:wrap}
+.price{font-weight:800;font-size:clamp(15px,2.2vw,17px);white-space:nowrap}
+.price small{font-weight:600;color:var(--ink-soft);font-size:13px}
+.mini{font-weight:700;font-size:14px;color:var(--violet-deep);background:#fff;border:1px solid var(--line);padding:8px 13px;border-radius:11px;white-space:nowrap}
+.mini:hover{background:var(--cream)}
+
+/* how it works */
+.how{background:var(--night);color:#fff;border-radius:clamp(20px,3vw,28px);padding:clamp(30px,5vw,46px) clamp(20px,4vw,34px);margin:10px 0}
+.how .eye{text-align:center;color:var(--gold);font-weight:700;font-size:clamp(12px,1.8vw,14px);text-transform:uppercase;letter-spacing:.07em}
+.how h2{color:#fff;text-align:center;font-size:clamp(22px,3.4vw,34px);margin-top:6px}
+.how-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:clamp(16px,3vw,22px);margin-top:clamp(24px,4vw,34px)}
+.step-c{text-align:center}
+.step-n{width:56px;height:56px;margin:0 auto 14px;border-radius:16px;background:var(--night-2);display:grid;place-items:center;font-size:26px;border:1px solid rgba(255,255,255,.12);position:relative}
+.step-n .num{position:absolute;top:-8px;right:-8px;width:24px;height:24px;background:var(--gold);color:var(--night);border-radius:50%;font-size:13px;font-weight:800;display:grid;place-items:center}
+.step-c h3{color:#fff;font-size:clamp(16px,2.4vw,18px)}
+.step-c p{color:rgba(255,255,255,.66);font-size:clamp(13px,1.9vw,14px);margin-top:5px}
+
+/* faces showcase */
+.faces{background:linear-gradient(160deg,#fff,var(--cream));border:1px solid var(--line);border-radius:clamp(20px,3vw,28px);padding:clamp(28px,5vw,44px) clamp(20px,4vw,34px);text-align:center}
+.faces .eye{color:var(--violet-deep);font-weight:700;font-size:clamp(12px,1.8vw,14px);text-transform:uppercase;letter-spacing:.06em}
+.faces h2{font-size:clamp(22px,3.4vw,34px);margin-top:6px}
+.faces-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:clamp(14px,3vw,26px);margin-top:clamp(24px,4vw,36px)}
+.faces-card .imgs{display:flex;gap:8px;justify-content:center}
+.faces-card .fc{width:clamp(46px,8vw,62px);height:clamp(46px,8vw,62px);border-radius:14px;display:grid;place-items:center;font-size:clamp(24px,4vw,32px);box-shadow:var(--shadow)}
+.faces-card h3{font-size:clamp(16px,2.2vw,18px);margin-top:12px}
+
+/* career band */
+.career{background:var(--night);color:#fff;border-radius:clamp(20px,3vw,28px);padding:clamp(28px,5vw,44px) clamp(20px,4vw,34px)}
+.career .eye{color:var(--gold);font-weight:700;font-size:clamp(12px,1.8vw,14px);text-transform:uppercase;letter-spacing:.06em}
+.career h2{color:#fff;font-size:clamp(22px,3.4vw,34px);margin-top:6px;max-width:16em}
+.career-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr));gap:clamp(12px,2vw,18px);margin-top:clamp(24px,4vw,32px)}
+.career-card{background:var(--night-2);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:18px;text-align:center}
+.career-card .ic{font-size:clamp(34px,6vw,46px)}
+.career-card p{color:#fff;font-weight:700;margin-top:8px;font-size:clamp(14px,2vw,16px)}
+
+/* age band */
+.age-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:clamp(14px,2vw,20px)}
+.age-card{border-radius:var(--radius);padding:clamp(22px,4vw,32px) 20px;text-align:center;cursor:pointer;color:#fff;transition:transform .15s ease,box-shadow .2s ease}
+.age-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.age-card .ic{font-size:clamp(40px,7vw,56px)}
+.age-card h3{color:#fff;font-size:clamp(18px,2.6vw,22px);margin-top:8px}
+.age-card .go{margin-top:8px;font-weight:700;color:rgba(255,255,255,.9);font-size:14px}
+
+/* faq */
+.faq-wrap{max-width:760px;margin:0 auto}
+.faq-item{background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:10px;overflow:hidden}
+.faq-q{width:100%;text-align:left;padding:16px 18px;font-weight:700;font-size:clamp(15px,2.2vw,17px);display:flex;justify-content:space-between;align-items:center;gap:12px;color:var(--ink)}
+.faq-q .pm{color:var(--violet-deep);font-size:22px;flex-shrink:0}
+.faq-a{padding:0 18px;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s ease;color:var(--ink-soft);font-size:clamp(14px,2vw,15px)}
+.faq-a.open{max-height:300px;padding:0 18px 16px}
+
+/* detail */
+.detail{display:grid;grid-template-columns:.9fr 1.1fr;gap:clamp(24px,4vw,42px);align-items:start;padding:clamp(28px,4vw,40px) 0}
+.detail-cover{aspect-ratio:4/5;border-radius:22px;display:grid;place-items:center;font-size:clamp(80px,14vw,120px);box-shadow:var(--shadow-lg);position:sticky;top:84px}
+/* page gallery */
+.detail-gallery{position:sticky;top:84px}
+.gal-main{position:relative;aspect-ratio:4/5;border-radius:20px;overflow:hidden;box-shadow:var(--shadow-lg);display:grid;place-items:center}
+.gal-main img{width:100%;height:100%;object-fit:cover}
+.gal-emoji{font-size:clamp(80px,14vw,120px)}
+.gal-arrow{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.9);box-shadow:var(--shadow);font-size:18px;font-weight:800;color:var(--night);display:grid;place-items:center}
+.gal-arrow.left{left:12px}
+.gal-arrow.right{right:12px}
+.gal-arrow:hover{background:#fff}
+.gal-count{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(33,26,69,.8);color:#fff;font-size:13px;font-weight:700;padding:5px 12px;border-radius:999px}
+.gal-thumbs{display:flex;gap:8px;margin-top:12px;overflow-x:auto;padding-bottom:6px}
+.gal-thumb{flex:0 0 auto;width:58px;height:72px;border-radius:9px;overflow:hidden;border:2px solid transparent;padding:0;background:var(--cream)}
+.gal-thumb img{width:100%;height:100%;object-fit:cover}
+.gal-thumb.on{border-color:var(--violet)}
+@media(max-width:1024px){.detail-gallery{position:static}}
+.detail-info h1{font-size:clamp(26px,4.2vw,42px)}
+.detail-info .d{font-size:clamp(16px,2.4vw,18px);color:var(--ink-soft);margin-top:12px}
+.specs{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+.spec{background:#fff;border:1px solid var(--line);border-radius:13px;padding:11px 15px;min-width:90px;flex:1}
+.spec .l{font-size:12px;color:var(--ink-soft);font-weight:600}
+.spec .v{font-size:clamp(15px,2.2vw,17px);font-weight:800;margin-top:2px}
+.detail-price{display:flex;align-items:baseline;gap:8px;margin:24px 0}
+.detail-price b{font-size:clamp(26px,4vw,30px)}
+.back-link{display:inline-flex;align-items:center;gap:6px;font-weight:700;color:var(--ink-soft);padding:10px 0;margin-top:8px;font-size:clamp(14px,2vw,16px)}
+.back-link:hover{color:var(--ink)}
+
+/* wizard */
+.wiz{max-width:680px;margin:0 auto;padding:clamp(24px,4vw,34px) 0 60px}
+.wiz-card{background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:clamp(22px,4vw,30px)}
+.wiz-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.wiz-step{font-weight:700;color:var(--violet-deep);font-size:14px}
+.wiz-top .bt{font-weight:800;font-size:clamp(14px,2vw,16px)}
+.progress{height:7px;background:var(--cream);border-radius:999px;overflow:hidden;margin:14px 0 24px}
+.progress i{display:block;height:100%;background:var(--gold);transition:width .35s ease}
+.wiz h2{font-size:clamp(20px,3vw,24px);margin-bottom:18px}
+.field{margin-bottom:18px}
+.field label{display:block;font-weight:700;font-size:15px;margin-bottom:8px}
+.field .opt{font-weight:600;color:var(--ink-soft);font-size:13px}
+.inp,.ta{width:100%;font-family:inherit;font-size:16px;padding:13px 15px;border:1.5px solid var(--line);border-radius:13px;background:var(--paper);color:var(--ink);transition:border-color .15s ease}
+.inp:focus,.ta:focus{outline:none;border-color:var(--violet)}
+.ta{min-height:84px;resize:vertical}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg button{padding:14px;border-radius:13px;border:1.5px solid var(--line);background:var(--paper);font-weight:700;font-size:clamp(14px,2vw,15px);color:var(--ink-soft);display:flex;align-items:center;justify-content:center;gap:8px}
+.seg button.on{border-color:var(--violet);background:rgba(108,92,231,.08);color:var(--violet-deep)}
+.ages{display:flex;gap:9px;flex-wrap:wrap}
+.ages button{width:50px;height:50px;border-radius:13px;border:1.5px solid var(--line);background:var(--paper);font-weight:800;font-size:16px;color:var(--ink-soft)}
+.ages button.on{border-color:var(--violet);background:rgba(108,92,231,.08);color:var(--violet-deep)}
+.drop{border:2px dashed rgba(108,92,231,.4);border-radius:16px;padding:26px;text-align:center;background:rgba(108,92,231,.04);cursor:pointer;transition:background .15s ease}
+.drop:hover{background:rgba(108,92,231,.08)}
+.drop .ic{font-size:34px}
+.drop p{color:var(--ink-soft);font-size:14px;margin-top:8px}
+.photo-prev{display:flex;align-items:center;gap:14px;background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:12px}
+.photo-prev img{width:64px;height:64px;border-radius:12px;object-fit:cover;flex-shrink:0}
+.photo-prev .x{margin-left:auto;color:var(--ink-soft);font-weight:700;padding:8px 10px;border-radius:9px;flex-shrink:0}
+.photo-prev .x:hover{background:var(--cream);color:var(--ink)}
+.wiz-nav{display:flex;gap:12px;margin-top:24px}
+.pv-book{aspect-ratio:4/5;max-width:300px;margin:0 auto 18px;border-radius:18px;display:grid;place-items:center;box-shadow:var(--shadow-lg);position:relative;overflow:hidden}
+/* preview pages */
+.pv-pages{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,150px),1fr));gap:12px;margin-bottom:16px}
+.pv-page{position:relative;aspect-ratio:4/5;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--cream)}
+.pv-page img{width:100%;height:100%;object-fit:cover;display:block}
+.pv-page.locked img{filter:blur(7px) brightness(.85);transform:scale(1.05)}
+.pv-lock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:rgba(33,26,69,.32);color:#fff;text-align:center;padding:10px}
+.pv-lock-ic{font-size:26px}
+.pv-lock-tx{font-size:12px;font-weight:700;line-height:1.3;text-shadow:0 1px 4px rgba(0,0,0,.5)}
+.pv-face{position:absolute;bottom:8px;right:8px;width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid #fff;box-shadow:var(--shadow)}
+.pv-pagenum{position:absolute;top:8px;left:8px;background:rgba(33,26,69,.7);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px}
+.pv-locked-note{grid-column:1/-1;text-align:center;background:var(--cream);border-radius:12px;padding:12px;font-weight:700;color:var(--gold-deep)}
+.wiz-order{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.pv-photo{width:clamp(70px,16vw,84px);height:clamp(70px,16vw,84px);border-radius:50%;object-fit:cover;border:4px solid #fff;box-shadow:var(--shadow)}
+.pv-hero{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.92);border-radius:13px;padding:8px 14px;font-weight:800;font-size:clamp(15px,2.4vw,18px);color:var(--night);white-space:nowrap;max-width:90%;overflow:hidden;text-overflow:ellipsis}
+.pv-note{background:var(--cream);border-radius:13px;padding:14px 16px;color:var(--ink-soft);font-size:14px;text-align:center;margin-top:6px}
+
+/* cart */
+.cart-page{max-width:760px;margin:0 auto;padding:clamp(24px,4vw,34px) 0 60px}
+.cart-row{display:flex;gap:14px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+.cart-cover{width:70px;height:88px;border-radius:11px;display:grid;place-items:center;font-size:36px;flex-shrink:0;overflow:hidden}
+.cart-meta{flex:1;min-width:0}
+.cart-meta h3{font-size:clamp(15px,2.2vw,17px)}
+.cart-meta .for{font-size:14px;color:var(--ink-soft);margin-top:3px;overflow-wrap:break-word}
+.cart-meta .rm{font-size:13px;color:#c0392b;font-weight:700;margin-top:6px;display:inline-block}
+.cart-meta .rm:hover{text-decoration:underline}
+.cart-price{font-weight:800;font-size:clamp(15px,2.2vw,17px);white-space:nowrap}
+.cart-sum{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;margin-top:8px}
+.cart-sum .row{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:clamp(16px,2.4vw,18px)}
+.cart-sum .row b{font-size:clamp(19px,3vw,22px);white-space:nowrap}
+.empty{text-align:center;padding:70px 0}
+.empty .ic{font-size:60px}
+.empty h2{margin:16px 0 6px}
+.empty p{color:var(--ink-soft);margin-bottom:20px}
+
+/* checkout */
+.co{max-width:680px;margin:0 auto;padding:clamp(24px,4vw,34px) 0 60px}
+.co-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pay{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px}
+.pay button{padding:15px;border-radius:13px;border:1.5px solid var(--line);background:var(--paper);font-weight:800;font-size:15px;color:var(--ink-soft)}
+.pay button.on{border-color:var(--violet);background:rgba(108,92,231,.08);color:var(--violet-deep)}
+.done{text-align:center;padding:60px 0}
+.done .ic{font-size:70px}
+.done h2{font-size:clamp(24px,3.4vw,28px);margin:14px 0 8px}
+.done p{color:var(--ink-soft);max-width:26em;margin:0 auto 22px}
+
+/* footer */
+.ft{background:var(--night);color:#fff;margin-top:30px;padding:clamp(36px,5vw,48px) 0 30px}
+.ft-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:clamp(24px,4vw,30px)}
+.ft .logo{color:#fff}
+.ft p{color:rgba(255,255,255,.6);font-size:14px;margin-top:12px;max-width:24em}
+.ft h4{color:#fff;font-size:15px;margin-bottom:12px}
+.ft ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:9px}
+.ft a{color:rgba(255,255,255,.7);font-size:14px;cursor:pointer}
+.ft a:hover{color:var(--gold)}
+.ft-base{border-top:1px solid rgba(255,255,255,.12);margin-top:30px;padding-top:18px;color:rgba(255,255,255,.5);font-size:13px;text-align:center}
+
+/* ----- admin ----- */
+.admin{padding:clamp(20px,4vw,32px) 0 60px}
+.admin-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.admin-top h1{font-size:clamp(22px,3.4vw,30px)}
+.admin-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;border-bottom:1px solid var(--line);padding-bottom:14px}
+.admin-tabs button{padding:10px 16px;border-radius:11px;font-weight:700;font-size:15px;background:#fff;border:1px solid var(--line);color:var(--ink-soft)}
+.admin-tabs button.on{background:var(--night);color:#fff;border-color:var(--night)}
+.muted{color:var(--ink-soft);padding:20px 0;font-size:15px}
+.err-box{background:#fdecea;color:#c0392b;border-radius:12px;padding:12px 14px;font-size:14px;margin:8px 0}
+.admin-login{max-width:420px;margin:0 auto;padding:clamp(30px,8vw,70px) 0}
+.login-card{background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:30px}
+/* orders */
+.ord-list{display:flex;flex-direction:column;gap:14px}
+.ord-card{display:flex;gap:14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px}
+.ord-photo{width:78px;height:78px;border-radius:12px;overflow:hidden;flex-shrink:0;background:var(--cream);display:grid;place-items:center;font-size:34px}
+.ord-photo img{width:100%;height:100%;object-fit:cover}
+.ord-body{flex:1;min-width:0}
+.ord-head{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap}
+.ord-head b{font-size:16px}
+.st{font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px;text-transform:capitalize}
+.st-yangi{background:#fff4d6;color:#9a6b00}
+.st-tayyorlanmoqda{background:#e0ecff;color:#2b5fb3}
+.st-yuborildi{background:#dff5e3;color:#1f8a3b}
+.st-bekor{background:#fdecea;color:#c0392b}
+.ord-meta{font-size:14px;color:var(--ink-soft);margin-top:3px;overflow-wrap:break-word}
+.ord-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.ord-actions button{font-size:13px;font-weight:700;padding:7px 11px;border-radius:9px;background:var(--paper);border:1px solid var(--line);color:var(--ink-soft)}
+.ord-actions button.on{background:var(--violet);color:#fff;border-color:var(--violet)}
+/* books list */
+.bk-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:14px}
+.bk-card{display:flex;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px}
+.bk-cover{width:70px;height:88px;border-radius:10px;overflow:hidden;flex-shrink:0;display:grid;place-items:center;font-size:34px}
+.bk-cover img{width:100%;height:100%;object-fit:cover}
+.bk-body{flex:1;min-width:0}
+.bk-body b{font-size:15px}
+.bk-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.bk-actions button{font-size:13px;font-weight:700;padding:6px 10px;border-radius:9px;background:var(--paper);border:1px solid var(--line);color:var(--ink-soft)}
+.bk-actions .del{color:#c0392b}
+/* add form */
+.add-form{max-width:720px}
+.co-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+@media(max-width:600px){.co-grid3{grid-template-columns:1fr}}
+.pdf-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+@media(max-width:600px){.pdf-row{grid-template-columns:1fr}}
+.pdf-pick{display:flex;flex-direction:column;gap:6px;background:var(--paper);border:1.5px solid var(--line);border-radius:13px;padding:12px;font-weight:700;font-size:14px;cursor:pointer}
+.pdf-pick input{font-size:12px}
+.pdf-pick small{font-weight:600;color:var(--ink-soft);font-size:12px}
+
+
+@media(max-width:1024px){
+  .hero-grid{grid-template-columns:1fr;gap:20px;text-align:center;min-height:0}
+  .hero-copy{max-width:100%;margin:0 auto}
+  .hero .eyebrow{margin:0 auto}
+  .hero-sub{margin-left:auto;margin-right:auto}
+  .hero-cta{justify-content:center}
+  .hero-motion{min-height:clamp(300px,60vw,420px);order:-1}
+  .motion-stage{transform:rotate(-5deg)}
+  .detail{grid-template-columns:1fr}
+  .detail-cover{position:static;max-width:300px;margin:0 auto}
+}
+@media(max-width:768px){
+  .nav{display:none}
+  .ft-grid{grid-template-columns:1fr 1fr}
+  .career h2{max-width:100%}
+}
+@media(max-width:520px){
+  .hd-in{height:60px}
+  .co-grid{grid-template-columns:1fr}
+  .pay{grid-template-columns:1fr}
+  .ft-grid{grid-template-columns:1fr}
+  .hero-cta .btn{flex:1}
+  .sec-head{flex-direction:column;align-items:flex-start;gap:6px}
+}
+`;
+
+/* ------------------------------ component ------------------------------ */
+function Ertaklar() {
+  const [lang, setLang] = useState("uz");
+  const t = T[lang];
+  const [route, setRoute] = useState({
+    name: "home"
+  });
+  const [cart, setCart] = useState([]);
+  const [books, setBooks] = useState(DEMO_BOOKS);
+  const [loading, setLoading] = useState(true);
+  const topRef = useRef(null);
+  useEffect(() => {
+    if (topRef.current) topRef.current.scrollIntoView({
+      behavior: "auto",
+      block: "start"
+    });
+  }, [route]);
+
+  // Load books from Supabase; fall back to demo if DB is empty or errors
+  useEffect(() => {
+    (async () => {
+      try {
+        const rows = await sbSelect("books", "is_active=eq.true&order=created_at.desc");
+        if (Array.isArray(rows) && rows.length > 0) {
+          setBooks(rows.map(r => ({
+            id: r.id,
+            title: {
+              uz: r.title_uz || "",
+              ru: r.title_ru || r.title_uz || ""
+            },
+            desc: {
+              uz: r.desc_uz || "",
+              ru: r.desc_ru || r.desc_uz || ""
+            },
+            price: r.price || 0,
+            age: r.age_range || "",
+            pages: r.pages || 0,
+            badge: r.badge || null,
+            gender: r.gender || null,
+            hue: r.hue ?? 262,
+            emoji: r.emoji || "📖",
+            cover_url: r.cover_url || null,
+            pages_uz: r.pages_uz || [],
+            pages_ru: r.pages_ru || [],
+            pages_en: r.pages_en || [],
+            free_pages: r.free_pages ?? 2
+          })));
+        }
+      } catch (e) {
+        console.warn("Books load failed, using demo:", e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+  const go = r => setRoute(r);
+  const bookById = id => books.find(b => b.id === id);
+  const cartTotal = useMemo(() => cart.reduce((s, it) => s + it.price, 0), [cart]);
+  const addToCart = item => setCart(c => [...c, {
+    ...item,
+    key: Date.now() + Math.random()
+  }]);
+  const removeFromCart = key => setCart(c => c.filter(it => it.key !== key));
+  return /*#__PURE__*/React.createElement("div", {
+    className: "ert"
+  }, /*#__PURE__*/React.createElement("link", {
+    href: "https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700&display=swap",
+    rel: "stylesheet"
+  }), /*#__PURE__*/React.createElement("style", null, CSS), /*#__PURE__*/React.createElement("span", {
+    ref: topRef
+  }), /*#__PURE__*/React.createElement(Header, {
+    t: t,
+    lang: lang,
+    setLang: setLang,
+    route: route,
+    go: go,
+    cartCount: cart.length
+  }), route.name === "home" && /*#__PURE__*/React.createElement(Home, {
+    t: t,
+    lang: lang,
+    go: go,
+    books: books
+  }), route.name === "catalog" && /*#__PURE__*/React.createElement(Catalog, {
+    t: t,
+    lang: lang,
+    go: go,
+    filter: route.filter,
+    books: books
+  }), route.name === "book" && /*#__PURE__*/React.createElement(BookDetail, {
+    t: t,
+    lang: lang,
+    go: go,
+    book: bookById(route.id)
+  }), route.name === "wizard" && /*#__PURE__*/React.createElement(Wizard, {
+    t: t,
+    lang: lang,
+    go: go,
+    book: bookById(route.id),
+    onComplete: item => {
+      addToCart(item);
+      go({
+        name: item.orderNow ? "checkout" : "cart"
+      });
+    }
+  }), route.name === "cart" && /*#__PURE__*/React.createElement(CartPage, {
+    t: t,
+    lang: lang,
+    go: go,
+    cart: cart,
+    total: cartTotal,
+    remove: removeFromCart
+  }), route.name === "checkout" && /*#__PURE__*/React.createElement(Checkout, {
+    t: t,
+    lang: lang,
+    go: go,
+    total: cartTotal,
+    cart: cart,
+    clear: () => setCart([])
+  }), route.name === "admin" && /*#__PURE__*/React.createElement(Admin, {
+    t: t,
+    lang: lang,
+    go: go
+  }), /*#__PURE__*/React.createElement(Footer, {
+    t: t,
+    go: go
+  }));
+}
+
+/* ------------------------------- header -------------------------------- */
+function Header({
+  t,
+  lang,
+  setLang,
+  route,
+  go,
+  cartCount
+}) {
+  const item = (name, label) => /*#__PURE__*/React.createElement("button", {
+    className: route.name === name ? "on" : "",
+    onClick: () => go({
+      name
+    })
+  }, label);
+  return /*#__PURE__*/React.createElement("header", {
+    className: "hd"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "wrap hd-in"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "logo",
+    onClick: () => go({
+      name: "home"
+    })
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "logo-star"
+  }, "\u2726"), " ", BRAND), /*#__PURE__*/React.createElement("nav", {
+    className: "nav"
+  }, item("home", t.nav_home), item("catalog", t.nav_books), /*#__PURE__*/React.createElement("button", {
+    onClick: () => go({
+      name: "home"
+    })
+  }, t.nav_how), /*#__PURE__*/React.createElement("button", null, t.nav_support)), /*#__PURE__*/React.createElement("div", {
+    className: "hd-right"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "lang-btn",
+    onClick: () => setLang(lang === "uz" ? "ru" : "uz")
+  }, t.lang_switch), /*#__PURE__*/React.createElement("button", {
+    className: "cart-btn",
+    onClick: () => go({
+      name: "cart"
+    })
+  }, "\uD83D\uDED2", cartCount > 0 && /*#__PURE__*/React.createElement("span", {
+    className: "cart-badge"
+  }, cartCount)))));
+}
+
+/* -------------------------------- home --------------------------------- */
+function Home({
+  t,
+  lang,
+  go,
+  books
+}) {
+  const best = books.filter(b => b.badge === "best").concat(books.filter(b => !b.badge)).slice(0, 4);
+  const fresh = books.filter(b => b.badge === "new").concat(books.filter(b => b.badge === "best")).slice(0, 4);
+  const girls = books.filter(b => b.gender === "girl").slice(0, 4);
+  const boys = books.filter(b => b.gender === "boy").slice(0, 4);
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("section", {
+    className: "hero"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "wrap hero-grid"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "hero-copy"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "eyebrow"
+  }, "\u2726 ", t.hero_eyebrow), /*#__PURE__*/React.createElement("h1", null, t.hero_title), /*#__PURE__*/React.createElement("p", {
+    className: "hero-sub"
+  }, t.hero_sub), /*#__PURE__*/React.createElement("div", {
+    className: "hero-cta"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-pri",
+    onClick: () => go({
+      name: "catalog"
+    })
+  }, "\u2726 ", t.hero_cta), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost",
+    onClick: () => go({
+      name: "catalog"
+    })
+  }, t.hero_cta2))), /*#__PURE__*/React.createElement("div", {
+    className: "hero-motion"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "spark",
+    style: {
+      left: "2%",
+      top: "10%"
+    }
+  }, "\u2726"), /*#__PURE__*/React.createElement("span", {
+    className: "spark",
+    style: {
+      right: "2%",
+      top: "16%",
+      animationDelay: ".7s"
+    }
+  }, "\u2727"), /*#__PURE__*/React.createElement("span", {
+    className: "spark",
+    style: {
+      left: "6%",
+      bottom: "10%",
+      animationDelay: "1.3s"
+    }
+  }, "\u2726"), /*#__PURE__*/React.createElement("span", {
+    className: "spark",
+    style: {
+      right: "8%",
+      bottom: "18%",
+      animationDelay: "2s"
+    }
+  }, "\u2727"), /*#__PURE__*/React.createElement("div", {
+    className: "motion-stage"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mbook",
+    style: darkCoverStyle(262)
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "title-top"
+  }, lang === "uz" ? "Amir va Yulduzlar" : "Амир и Звёзды"), /*#__PURE__*/React.createElement("div", {
+    className: "scene"
+  }, "\uD83D\uDC09"), /*#__PURE__*/React.createElement("div", {
+    className: "scene"
+  }, "\uD83D\uDE80"), /*#__PURE__*/React.createElement("div", {
+    className: "scene"
+  }, "\uD83E\uDDDA"), /*#__PURE__*/React.createElement("div", {
+    className: "morph"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "ph"
+  }, "\uD83D\uDE42"), /*#__PURE__*/React.createElement("span", {
+    className: "arw"
+  }, "\u2192"), /*#__PURE__*/React.createElement("span", {
+    className: "nm"
+  }, lang === "uz" ? "Amir" : "Амир", " \u2726"))))))), /*#__PURE__*/React.createElement(Section, {
+    t: t,
+    go: go,
+    eye: t.section_best,
+    title: t.section_best_sub
+  }, /*#__PURE__*/React.createElement(BookGrid, {
+    books: best,
+    t: t,
+    lang: lang,
+    go: go
+  })), /*#__PURE__*/React.createElement("section", {
+    className: "wrap",
+    style: {
+      padding: "10px 0"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "wrap",
+    style: {
+      padding: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "how"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "eye"
+  }, t.how_eyebrow), /*#__PURE__*/React.createElement("h2", null, t.how_title), /*#__PURE__*/React.createElement("div", {
+    className: "how-grid"
+  }, [["📖", t.how_1_t, t.how_1_d], ["📷", t.how_2_t, t.how_2_d], ["👀", t.how_3_t, t.how_3_d], ["🚚", t.how_4_t, t.how_4_d]].map(([ic, h, d], i) => /*#__PURE__*/React.createElement("div", {
+    className: "step-c",
+    key: i
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "step-n"
+  }, ic, /*#__PURE__*/React.createElement("span", {
+    className: "num"
+  }, i + 1)), /*#__PURE__*/React.createElement("h3", null, h), /*#__PURE__*/React.createElement("p", null, d))))))), /*#__PURE__*/React.createElement(Section, {
+    t: t,
+    go: go,
+    eye: t.section_new,
+    title: t.section_new_sub
+  }, /*#__PURE__*/React.createElement(BookGrid, {
+    books: fresh,
+    t: t,
+    lang: lang,
+    go: go
+  })), /*#__PURE__*/React.createElement("section", {
+    className: "wrap",
+    style: {
+      padding: "10px 0"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "faces"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "eye"
+  }, t.faces_eyebrow), /*#__PURE__*/React.createElement("h2", null, t.faces_title), /*#__PURE__*/React.createElement("div", {
+    className: "faces-row"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "faces-card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "imgs"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "fc",
+    style: coverStyle(262)
+  }, "\uD83D\uDE42"), /*#__PURE__*/React.createElement("div", {
+    className: "fc",
+    style: coverStyle(320)
+  }, "\uD83D\uDE04")), /*#__PURE__*/React.createElement("h3", null, t.faces_1)), /*#__PURE__*/React.createElement("div", {
+    className: "faces-card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "imgs"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "fc",
+    style: coverStyle(28)
+  }, "\uD83D\uDE2E"), /*#__PURE__*/React.createElement("div", {
+    className: "fc",
+    style: coverStyle(150)
+  }, "\uD83D\uDE0A")), /*#__PURE__*/React.createElement("h3", null, t.faces_2)), /*#__PURE__*/React.createElement("div", {
+    className: "faces-card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "imgs"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "fc",
+    style: coverStyle(190)
+  }, "\uD83D\uDE43"), /*#__PURE__*/React.createElement("div", {
+    className: "fc",
+    style: coverStyle(8)
+  }, "\uD83D\uDE0E")), /*#__PURE__*/React.createElement("h3", null, t.faces_3))))), /*#__PURE__*/React.createElement(Section, {
+    t: t,
+    go: go,
+    eye: t.nav_books,
+    title: t.section_girls,
+    onAll: () => go({
+      name: "catalog",
+      filter: "girl"
+    })
+  }, /*#__PURE__*/React.createElement(BookGrid, {
+    books: girls,
+    t: t,
+    lang: lang,
+    go: go
+  })), /*#__PURE__*/React.createElement("section", {
+    className: "wrap",
+    style: {
+      padding: "10px 0"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "career"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "eye"
+  }, t.career_eyebrow), /*#__PURE__*/React.createElement("h2", null, t.career_title), /*#__PURE__*/React.createElement("div", {
+    className: "career-row"
+  }, [["🚒", t.career_fire], ["👮", t.career_police], ["✈️", t.career_pilot], ["🩺", t.career_doc]].map(([ic, p], i) => /*#__PURE__*/React.createElement("div", {
+    className: "career-card",
+    key: i
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "ic"
+  }, ic), /*#__PURE__*/React.createElement("p", null, p)))))), /*#__PURE__*/React.createElement(Section, {
+    t: t,
+    go: go,
+    eye: t.nav_books,
+    title: t.section_boys,
+    onAll: () => go({
+      name: "catalog",
+      filter: "boy"
+    })
+  }, /*#__PURE__*/React.createElement(BookGrid, {
+    books: boys,
+    t: t,
+    lang: lang,
+    go: go
+  })), /*#__PURE__*/React.createElement("section", {
+    className: "sec wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sec-head"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "eye"
+  }, "\u2726 ", t.section_age), /*#__PURE__*/React.createElement("h2", null, t.section_age))), /*#__PURE__*/React.createElement("div", {
+    className: "age-row"
+  }, [[t.age_2_4, "🧸", 320], [t.age_4_6, "🎨", 230], [t.age_6_8, "🚀", 150]].map(([lbl, ic, hue], i) => /*#__PURE__*/React.createElement("div", {
+    className: "age-card",
+    key: i,
+    style: darkCoverStyle(hue),
+    onClick: () => go({
+      name: "catalog"
+    })
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "ic"
+  }, ic), /*#__PURE__*/React.createElement("h3", null, lbl), /*#__PURE__*/React.createElement("div", {
+    className: "go"
+  }, t.discover, " \u2192"))))), /*#__PURE__*/React.createElement("section", {
+    className: "sec wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sec-head",
+    style: {
+      justifyContent: "center",
+      textAlign: "center"
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", null, t.faq_title))), /*#__PURE__*/React.createElement(FAQ, {
+    items: t.faq
+  })));
+}
+function Section({
+  t,
+  eye,
+  title,
+  children,
+  onAll,
+  go
+}) {
+  return /*#__PURE__*/React.createElement("section", {
+    className: "sec wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sec-head"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "eye"
+  }, "\u2726 ", eye), /*#__PURE__*/React.createElement("h2", null, title)), /*#__PURE__*/React.createElement("span", {
+    className: "link-all",
+    onClick: onAll || (() => go({
+      name: "catalog"
+    }))
+  }, t.view_all, " \u2192")), children);
+}
+function FAQ({
+  items
+}) {
+  const [open, setOpen] = useState(0);
+  return /*#__PURE__*/React.createElement("div", {
+    className: "faq-wrap"
+  }, items.map(([q, a], i) => /*#__PURE__*/React.createElement("div", {
+    className: "faq-item",
+    key: i
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "faq-q",
+    onClick: () => setOpen(open === i ? -1 : i)
+  }, /*#__PURE__*/React.createElement("span", null, q), /*#__PURE__*/React.createElement("span", {
+    className: "pm"
+  }, open === i ? "−" : "+")), /*#__PURE__*/React.createElement("div", {
+    className: "faq-a" + (open === i ? " open" : "")
+  }, a))));
+}
+
+/* ------------------------------ catalog -------------------------------- */
+function Catalog({
+  t,
+  lang,
+  go,
+  filter,
+  books
+}) {
+  const list = filter ? books.filter(b => b.gender === filter) : books;
+  const title = filter === "girl" ? t.section_girls : filter === "boy" ? t.section_boys : t.nav_books;
+  return /*#__PURE__*/React.createElement("section", {
+    className: "sec wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sec-head"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "eye"
+  }, "\u2726 ", t.nav_books), /*#__PURE__*/React.createElement("h2", null, title))), /*#__PURE__*/React.createElement(BookGrid, {
+    books: list,
+    t: t,
+    lang: lang,
+    go: go
+  }));
+}
+
+/* ----------------------------- book grid ------------------------------- */
+function BookGrid({
+  books,
+  t,
+  lang,
+  go
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "grid"
+  }, books.map(b => /*#__PURE__*/React.createElement("div", {
+    className: "card",
+    key: b.id,
+    onClick: () => go({
+      name: "book",
+      id: b.id
+    })
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "cover",
+    style: coverStyle(b.hue)
+  }, b.badge && /*#__PURE__*/React.createElement("span", {
+    className: `badge ${b.badge}`
+  }, b.badge === "best" ? t.badge_top : t.badge_new), b.cover_url ? /*#__PURE__*/React.createElement("img", {
+    src: b.cover_url,
+    alt: b.title[lang],
+    style: {
+      width: "100%",
+      height: "100%",
+      objectFit: "cover"
+    }
+  }) : b.emoji), /*#__PURE__*/React.createElement("div", {
+    className: "card-b"
+  }, /*#__PURE__*/React.createElement("h3", null, b.title[lang]), /*#__PURE__*/React.createElement("p", {
+    className: "d"
+  }, b.desc[lang]), /*#__PURE__*/React.createElement("div", {
+    className: "card-foot"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "price"
+  }, /*#__PURE__*/React.createElement("small", null, t.from, " "), fmtPrice(b.price), " ", /*#__PURE__*/React.createElement("small", null, t.currency)), /*#__PURE__*/React.createElement("button", {
+    className: "mini",
+    onClick: e => {
+      e.stopPropagation();
+      go({
+        name: "wizard",
+        id: b.id
+      });
+    }
+  }, t.personalise))))));
+}
+
+/* ----------------------------- book detail ----------------------------- */
+function BookDetail({
+  t,
+  lang,
+  go,
+  book
+}) {
+  const pages = book ? book[`pages_${lang}`]?.length ? book[`pages_${lang}`] : book.pages_uz || [] : [];
+  const [idx, setIdx] = useState(0);
+  if (!book) return null;
+  const hasPages = pages.length > 0;
+  const cur = hasPages ? pages[Math.min(idx, pages.length - 1)] : null;
+  const prev = () => setIdx(i => (i - 1 + pages.length) % pages.length);
+  const next = () => setIdx(i => (i + 1) % pages.length);
+  return /*#__PURE__*/React.createElement("section", {
+    className: "wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "back-link",
+    onClick: () => go({
+      name: "catalog"
+    })
+  }, "\u2190 ", t.nav_books), /*#__PURE__*/React.createElement("div", {
+    className: "detail"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "detail-gallery"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "gal-main",
+    style: coverStyle(book.hue)
+  }, cur ? /*#__PURE__*/React.createElement("img", {
+    src: cur,
+    alt: ""
+  }) : /*#__PURE__*/React.createElement("span", {
+    className: "gal-emoji"
+  }, book.emoji), hasPages && pages.length > 1 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+    className: "gal-arrow left",
+    onClick: prev
+  }, "\u2190"), /*#__PURE__*/React.createElement("button", {
+    className: "gal-arrow right",
+    onClick: next
+  }, "\u2192"), /*#__PURE__*/React.createElement("div", {
+    className: "gal-count"
+  }, idx + 1, " / ", pages.length))), hasPages && pages.length > 1 && /*#__PURE__*/React.createElement("div", {
+    className: "gal-thumbs"
+  }, pages.map((p, i) => /*#__PURE__*/React.createElement("button", {
+    key: i,
+    className: "gal-thumb" + (i === idx ? " on" : ""),
+    onClick: () => setIdx(i)
+  }, /*#__PURE__*/React.createElement("img", {
+    src: p,
+    alt: ""
+  }))))), /*#__PURE__*/React.createElement("div", {
+    className: "detail-info"
+  }, /*#__PURE__*/React.createElement("h1", null, book.title[lang]), /*#__PURE__*/React.createElement("p", {
+    className: "d"
+  }, book.desc[lang]), /*#__PURE__*/React.createElement("div", {
+    className: "specs"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "spec"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "l"
+  }, t.book_age), /*#__PURE__*/React.createElement("div", {
+    className: "v"
+  }, book.age || "—")), /*#__PURE__*/React.createElement("div", {
+    className: "spec"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "l"
+  }, t.book_pages), /*#__PURE__*/React.createElement("div", {
+    className: "v"
+  }, book.pages || pages.length || "—")), /*#__PURE__*/React.createElement("div", {
+    className: "spec"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "l"
+  }, t.book_lang), /*#__PURE__*/React.createElement("div", {
+    className: "v"
+  }, "UZ / RU"))), /*#__PURE__*/React.createElement("div", {
+    className: "detail-price"
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "var(--ink-soft)",
+      fontWeight: 600
+    }
+  }, t.from), /*#__PURE__*/React.createElement("b", null, fmtPrice(book.price)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "var(--ink-soft)",
+      fontWeight: 600
+    }
+  }, t.currency)), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-pri btn-block",
+    onClick: () => go({
+      name: "wizard",
+      id: book.id
+    })
+  }, "\u2726 ", t.personalise))));
+}
+
+/* ------------------------------- wizard -------------------------------- */
+function Wizard({
+  t,
+  lang,
+  go,
+  book,
+  onComplete
+}) {
+  const [step, setStep] = useState(1);
+  const [data, setData] = useState({
+    name: "",
+    gender: "",
+    age: "",
+    photo: null,
+    photoFile: null,
+    photoUrl: "",
+    bookLang: lang,
+    dedication: ""
+  });
+  const fileRef = useRef(null);
+  const TOTAL = 4;
+  if (!book) return null;
+  const set = (k, v) => setData(d => ({
+    ...d,
+    [k]: v
+  }));
+  const onFile = file => {
+    if (!file) return;
+    setData(d => ({
+      ...d,
+      photo: file.name,
+      photoFile: file,
+      photoUrl: URL.createObjectURL(file)
+    }));
+  };
+  const finish = orderNow => onComplete({
+    bookId: book.id,
+    title: book.title,
+    emoji: book.emoji,
+    hue: book.hue,
+    price: book.price,
+    childName: data.name,
+    childAge: data.age,
+    gender: data.gender,
+    photoUrl: data.photoUrl,
+    photoFile: data.photoFile,
+    dedication: data.dedication,
+    bookLang: data.bookLang,
+    orderNow
+  });
+  const canNext = step === 1 && data.name.trim() && data.gender || step === 2 && data.age || step === 3 && data.photoUrl || step === 4;
+  const ages = ["1", "2", "3", "4", "5", "6", "7", "8"];
+  return /*#__PURE__*/React.createElement("section", {
+    className: "wiz wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "back-link",
+    onClick: () => go({
+      name: "book",
+      id: book.id
+    })
+  }, "\u2190 ", book.title[lang]), /*#__PURE__*/React.createElement("div", {
+    className: "wiz-card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "wiz-top"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "wiz-step"
+  }, t.step, " ", step, " ", t.of, " ", TOTAL), /*#__PURE__*/React.createElement("span", {
+    className: "bt"
+  }, book.title[lang])), /*#__PURE__*/React.createElement("div", {
+    className: "progress"
+  }, /*#__PURE__*/React.createElement("i", {
+    style: {
+      width: `${step / TOTAL * 100}%`
+    }
+  })), step === 1 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h2", null, t.wizard_title), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, t.w_name), /*#__PURE__*/React.createElement("input", {
+    className: "inp",
+    placeholder: t.w_name_ph,
+    value: data.name,
+    onChange: e => set("name", e.target.value)
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, t.w_gender), /*#__PURE__*/React.createElement("div", {
+    className: "seg"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: data.gender === "boy" ? "on" : "",
+    onClick: () => set("gender", "boy")
+  }, "\uD83D\uDC66 ", t.w_boy), /*#__PURE__*/React.createElement("button", {
+    className: data.gender === "girl" ? "on" : "",
+    onClick: () => set("gender", "girl")
+  }, "\uD83D\uDC67 ", t.w_girl)))), step === 2 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h2", null, t.w_age_q), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, t.w_age), /*#__PURE__*/React.createElement("div", {
+    className: "ages"
+  }, ages.map(a => /*#__PURE__*/React.createElement("button", {
+    key: a,
+    className: data.age === a ? "on" : "",
+    onClick: () => set("age", a)
+  }, a)))), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, t.w_lang), /*#__PURE__*/React.createElement("div", {
+    className: "seg"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: data.bookLang === "uz" ? "on" : "",
+    onClick: () => set("bookLang", "uz")
+  }, "\uD83C\uDDFA\uD83C\uDDFF O\u2018zbekcha"), /*#__PURE__*/React.createElement("button", {
+    className: data.bookLang === "ru" ? "on" : "",
+    onClick: () => set("bookLang", "ru")
+  }, "\uD83C\uDDF7\uD83C\uDDFA \u0420\u0443\u0441\u0441\u043A\u0438\u0439")))), step === 3 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h2", null, t.w_photo), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, t.w_photo, " ", /*#__PURE__*/React.createElement("span", {
+    className: "opt"
+  }, "\u2014 ", t.w_photo_hint)), !data.photoUrl ? /*#__PURE__*/React.createElement("div", {
+    className: "drop",
+    onClick: () => fileRef.current?.click()
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "ic"
+  }, "\uD83D\uDCF7"), /*#__PURE__*/React.createElement("p", null, t.w_photo_drop)) : /*#__PURE__*/React.createElement("div", {
+    className: "photo-prev"
+  }, /*#__PURE__*/React.createElement("img", {
+    src: data.photoUrl,
+    alt: ""
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700
+    }
+  }, data.name || "—"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: "var(--ink-soft)",
+      fontSize: 13
+    }
+  }, data.photo)), /*#__PURE__*/React.createElement("button", {
+    className: "x",
+    onClick: () => {
+      set("photoUrl", "");
+      set("photo", null);
+    }
+  }, "\u2715")), /*#__PURE__*/React.createElement("input", {
+    ref: fileRef,
+    type: "file",
+    accept: "image/*",
+    style: {
+      display: "none"
+    },
+    onChange: e => onFile(e.target.files?.[0])
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, t.w_dedication, " ", /*#__PURE__*/React.createElement("span", {
+    className: "opt"
+  }, "\u2014 ", t.w_optional)), /*#__PURE__*/React.createElement("textarea", {
+    className: "ta",
+    placeholder: t.w_dedication_ph,
+    value: data.dedication,
+    onChange: e => set("dedication", e.target.value)
+  }))), step === 4 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h2", null, t.preview_title), (() => {
+    const pages = book[`pages_${data.bookLang}`]?.length ? book[`pages_${data.bookLang}`] : book.pages_uz || [];
+    const free = book.free_pages ?? 2;
+    if (pages.length === 0) {
+      return /*#__PURE__*/React.createElement("div", {
+        className: "pv-book",
+        style: darkCoverStyle(book.hue)
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          textAlign: "center"
+        }
+      }, data.photoUrl ? /*#__PURE__*/React.createElement("img", {
+        className: "pv-photo",
+        src: data.photoUrl,
+        alt: ""
+      }) : /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 70
+        }
+      }, book.emoji)), /*#__PURE__*/React.createElement("div", {
+        className: "pv-hero"
+      }, lang === "uz" ? `${data.name} va ${book.title.uz}` : `${data.name} и ${book.title.ru}`));
+    }
+    const lockedCount = Math.max(0, pages.length - free);
+    return /*#__PURE__*/React.createElement("div", {
+      className: "pv-pages"
+    }, pages.map((p, i) => {
+      const locked = i >= free;
+      return /*#__PURE__*/React.createElement("div", {
+        className: "pv-page" + (locked ? " locked" : ""),
+        key: i
+      }, /*#__PURE__*/React.createElement("img", {
+        src: p,
+        alt: `bet ${i + 1}`
+      }), locked && /*#__PURE__*/React.createElement("div", {
+        className: "pv-lock"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "pv-lock-ic"
+      }, "\uD83D\uDD12"), /*#__PURE__*/React.createElement("div", {
+        className: "pv-lock-tx"
+      }, t.locked_title)), !locked && data.photoUrl && /*#__PURE__*/React.createElement("img", {
+        className: "pv-face",
+        src: data.photoUrl,
+        alt: ""
+      }), /*#__PURE__*/React.createElement("div", {
+        className: "pv-pagenum"
+      }, i + 1));
+    }), lockedCount > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "pv-locked-note"
+    }, "\uD83D\uDD12 ", lockedCount, " ", t.locked_pages));
+  })(), /*#__PURE__*/React.createElement("p", {
+    className: "pv-note"
+  }, t.preview_note)), /*#__PURE__*/React.createElement("div", {
+    className: "wiz-nav"
+  }, step > 1 && step < TOTAL && /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost",
+    onClick: () => setStep(s => s - 1)
+  }, "\u2190 ", t.back), step < TOTAL && /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-pri btn-block",
+    disabled: !canNext,
+    onClick: () => setStep(s => s + 1)
+  }, step === 3 ? t.w_preview : t.next, " \u2192")), step === TOTAL && /*#__PURE__*/React.createElement("div", {
+    className: "wiz-order"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-pri btn-block",
+    onClick: () => finish(true)
+  }, "\u2726 ", t.order_now), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-block",
+    onClick: () => finish(false)
+  }, "\uD83D\uDED2 ", t.add_and_cart), /*#__PURE__*/React.createElement("button", {
+    className: "back-link",
+    style: {
+      justifyContent: "center"
+    },
+    onClick: () => setStep(s => s - 1)
+  }, "\u2190 ", t.back))));
+}
+
+/* -------------------------------- cart --------------------------------- */
+function CartPage({
+  t,
+  lang,
+  go,
+  cart,
+  total,
+  remove
+}) {
+  if (cart.length === 0) {
+    return /*#__PURE__*/React.createElement("section", {
+      className: "cart-page wrap"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "empty"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "ic"
+    }, "\uD83D\uDED2"), /*#__PURE__*/React.createElement("h2", null, t.cart_empty), /*#__PURE__*/React.createElement("p", null, t.footer_tag), /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-pri",
+      onClick: () => go({
+        name: "catalog"
+      })
+    }, t.cart_empty_cta)));
+  }
+  return /*#__PURE__*/React.createElement("section", {
+    className: "cart-page wrap"
+  }, /*#__PURE__*/React.createElement("h1", {
+    style: {
+      fontSize: "clamp(24px,4vw,30px)",
+      marginBottom: 20
+    }
+  }, t.cart_title), cart.map(it => /*#__PURE__*/React.createElement("div", {
+    className: "cart-row",
+    key: it.key
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "cart-cover",
+    style: coverStyle(it.hue)
+  }, it.photoUrl ? /*#__PURE__*/React.createElement("img", {
+    src: it.photoUrl,
+    alt: "",
+    style: {
+      width: "100%",
+      height: "100%",
+      objectFit: "cover"
+    }
+  }) : it.emoji), /*#__PURE__*/React.createElement("div", {
+    className: "cart-meta"
+  }, /*#__PURE__*/React.createElement("h3", null, it.title[lang]), /*#__PURE__*/React.createElement("div", {
+    className: "for"
+  }, t.cart_for, " ", it.childName, it.childAge ? `, ${it.childAge} ${t.age_unit}` : "", " \xB7 ", it.bookLang === "uz" ? "O‘zbekcha" : "Русский"), /*#__PURE__*/React.createElement("div", {
+    className: "rm",
+    onClick: () => remove(it.key)
+  }, t.cart_remove)), /*#__PURE__*/React.createElement("div", {
+    className: "cart-price"
+  }, fmtPrice(it.price), " ", t.currency))), /*#__PURE__*/React.createElement("div", {
+    className: "cart-sum"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "row"
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontWeight: 700
+    }
+  }, t.subtotal), /*#__PURE__*/React.createElement("b", null, fmtPrice(total), " ", t.currency)), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-pri btn-block",
+    style: {
+      marginTop: 16,
+      fontSize: "clamp(16px,2.4vw,18px)",
+      padding: "16px"
+    },
+    onClick: () => go({
+      name: "checkout"
+    })
+  }, "\u2726 ", t.checkout, " \u2192")));
+}
+
+/* ------------------------------ checkout ------------------------------- */
+function Checkout({
+  t,
+  lang,
+  go,
+  total,
+  cart,
+  clear
+}) {
+  const [done, setDone] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+  const [pay, setPay] = useState("payme");
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    addr: "",
+    city: ""
+  });
+  const set = (k, v) => setForm(f => ({
+    ...f,
+    [k]: v
+  }));
+  const ok = form.name.trim() && form.phone.trim() && form.addr.trim() && form.city.trim();
+  const placeOrder = async () => {
+    setSaving(true);
+    setErr("");
+    try {
+      for (const it of cart) {
+        let photoUrl = null;
+        if (it.photoFile) {
+          try {
+            photoUrl = await sbUploadPhoto(it.photoFile);
+          } catch (e) {
+            console.warn("photo upload failed", e);
+          }
+        }
+        await sbInsert("orders", {
+          book_id: typeof it.bookId === "string" && it.bookId.length > 20 ? it.bookId : null,
+          book_title: (it.title?.uz || "") + (it.title?.ru ? " / " + it.title.ru : ""),
+          child_name: it.childName || null,
+          child_age: it.childAge ? Number(it.childAge) : null,
+          gender: it.gender || null,
+          photo_url: photoUrl,
+          book_lang: it.bookLang || "uz",
+          dedication: it.dedication || null,
+          customer_name: form.name,
+          phone: form.phone,
+          city: form.city,
+          address: form.addr,
+          status: "yangi",
+          total_price: it.price || 0
+        });
+      }
+      setDone(true);
+    } catch (e) {
+      setErr((lang === "uz" ? "Buyurtmani saqlashda xato: " : "Ошибка при сохранении заказа: ") + (e?.message || e));
+      console.error(e);
+    } finally {
+      setSaving(false);
+    }
+  };
+  if (done) {
+    return /*#__PURE__*/React.createElement("section", {
+      className: "co wrap"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "done"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "ic"
+    }, "\uD83C\uDF89"), /*#__PURE__*/React.createElement("h2", null, t.co_done_t), /*#__PURE__*/React.createElement("p", null, t.co_done_d), /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-pri",
+      onClick: () => {
+        clear();
+        go({
+          name: "home"
+        });
+      }
+    }, t.co_back_home)));
+  }
+  return /*#__PURE__*/React.createElement("section", {
+    className: "co wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "back-link",
+    onClick: () => go({
+      name: "cart"
+    })
+  }, "\u2190 ", t.cart_title), /*#__PURE__*/React.createElement("h1", {
+    style: {
+      fontSize: "clamp(22px,3.4vw,28px)",
+      margin: "6px 0 20px"
+    }
+  }, t.co_title), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, t.co_name), /*#__PURE__*/React.createElement("input", {
+    className: "inp",
+    value: form.name,
+    onChange: e => set("name", e.target.value)
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "co-grid"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, t.co_phone), /*#__PURE__*/React.createElement("input", {
+    className: "inp",
+    placeholder: "+998 __ ___ __ __",
+    value: form.phone,
+    onChange: e => set("phone", e.target.value)
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, t.co_city), /*#__PURE__*/React.createElement("input", {
+    className: "inp",
+    value: form.city,
+    onChange: e => set("city", e.target.value)
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, t.co_addr), /*#__PURE__*/React.createElement("input", {
+    className: "inp",
+    value: form.addr,
+    onChange: e => set("addr", e.target.value)
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, t.co_pay), /*#__PURE__*/React.createElement("div", {
+    className: "pay"
+  }, [["payme", "Payme"], ["click", "Click"], ["cash", t.co_cash]].map(([k, lbl]) => /*#__PURE__*/React.createElement("button", {
+    key: k,
+    className: pay === k ? "on" : "",
+    onClick: () => setPay(k)
+  }, lbl)))), err && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#fdecea",
+      color: "#c0392b",
+      borderRadius: 12,
+      padding: "12px 14px",
+      fontSize: 14,
+      marginTop: 8
+    }
+  }, err), /*#__PURE__*/React.createElement("div", {
+    className: "cart-sum",
+    style: {
+      marginTop: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "row"
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontWeight: 700
+    }
+  }, t.subtotal), /*#__PURE__*/React.createElement("b", null, fmtPrice(total), " ", t.currency)), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-pri btn-block",
+    style: {
+      marginTop: 16
+    },
+    disabled: !ok || saving,
+    onClick: placeOrder
+  }, saving ? lang === "uz" ? "Saqlanmoqda…" : "Сохранение…" : `✦ ${t.co_place}`)));
+}
+
+/* ------------------------------- admin --------------------------------- */
+function Admin({
+  t,
+  lang,
+  go
+}) {
+  const [authed, setAuthed] = useState(isAdmin());
+  const [tab, setTab] = useState("orders");
+  if (!authed) return /*#__PURE__*/React.createElement(AdminLogin, {
+    onLogin: () => setAuthed(true),
+    go: go
+  });
+  return /*#__PURE__*/React.createElement("section", {
+    className: "admin wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "admin-top"
+  }, /*#__PURE__*/React.createElement("h1", null, BRAND, " \u2014 Admin"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "mini",
+    onClick: () => go({
+      name: "home"
+    })
+  }, "\u2190 Saytga"), /*#__PURE__*/React.createElement("button", {
+    className: "mini",
+    onClick: () => {
+      sbLogout();
+      setAuthed(false);
+    }
+  }, "Chiqish"))), /*#__PURE__*/React.createElement("div", {
+    className: "admin-tabs"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: tab === "orders" ? "on" : "",
+    onClick: () => setTab("orders")
+  }, "\uD83D\uDCE6 Buyurtmalar"), /*#__PURE__*/React.createElement("button", {
+    className: tab === "books" ? "on" : "",
+    onClick: () => setTab("books")
+  }, "\uD83D\uDCDA Kitoblar"), /*#__PURE__*/React.createElement("button", {
+    className: tab === "add" ? "on" : "",
+    onClick: () => setTab("add")
+  }, "\u2795 Kitob qo\u2018shish")), tab === "orders" && /*#__PURE__*/React.createElement(AdminOrders, null), tab === "books" && /*#__PURE__*/React.createElement(AdminBooks, null), tab === "add" && /*#__PURE__*/React.createElement(AdminAddBook, {
+    onDone: () => setTab("books")
+  }));
+}
+function AdminLogin({
+  onLogin,
+  go
+}) {
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    setBusy(true);
+    setErr("");
+    try {
+      await sbLogin(email.trim(), pass);
+      onLogin();
+    } catch {
+      setErr("Email yoki parol noto‘g‘ri.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return /*#__PURE__*/React.createElement("section", {
+    className: "admin-login wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "login-card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "logo",
+    style: {
+      justifyContent: "center",
+      marginBottom: 18
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "logo-star"
+  }, "\u2726"), " ", BRAND, " Admin"), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "Email"), /*#__PURE__*/React.createElement("input", {
+    className: "inp",
+    value: email,
+    onChange: e => setEmail(e.target.value)
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "Parol"), /*#__PURE__*/React.createElement("input", {
+    className: "inp",
+    type: "password",
+    value: pass,
+    onChange: e => setPass(e.target.value),
+    onKeyDown: e => e.key === "Enter" && submit()
+  })), err && /*#__PURE__*/React.createElement("div", {
+    className: "err-box"
+  }, err), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-pri btn-block",
+    disabled: busy,
+    onClick: submit
+  }, busy ? "Kirilmoqda…" : "Kirish"), /*#__PURE__*/React.createElement("div", {
+    className: "back-link",
+    style: {
+      justifyContent: "center",
+      marginTop: 10
+    },
+    onClick: () => go({
+      name: "home"
+    })
+  }, "\u2190 Saytga qaytish")));
+}
+function AdminOrders() {
+  const [orders, setOrders] = useState(null);
+  const [err, setErr] = useState("");
+  const load = async () => {
+    try {
+      setOrders(await sbAuthSelect("orders", "order=created_at.desc"));
+    } catch (e) {
+      setErr("Yuklashda xato: " + e.message);
+    }
+  };
+  useEffect(() => {
+    load();
+  }, []);
+  const setStatus = async (id, status) => {
+    await sbAuthUpdate("orders", id, {
+      status
+    });
+    load();
+  };
+  if (err) return /*#__PURE__*/React.createElement("div", {
+    className: "err-box"
+  }, err);
+  if (!orders) return /*#__PURE__*/React.createElement("div", {
+    className: "muted"
+  }, "Yuklanmoqda\u2026");
+  if (orders.length === 0) return /*#__PURE__*/React.createElement("div", {
+    className: "muted"
+  }, "Hozircha buyurtma yo\u2018q.");
+  return /*#__PURE__*/React.createElement("div", {
+    className: "ord-list"
+  }, orders.map(o => /*#__PURE__*/React.createElement("div", {
+    className: "ord-card",
+    key: o.id
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "ord-photo"
+  }, o.photo_url ? /*#__PURE__*/React.createElement("img", {
+    src: o.photo_url,
+    alt: ""
+  }) : /*#__PURE__*/React.createElement("span", null, "\uD83D\uDE42")), /*#__PURE__*/React.createElement("div", {
+    className: "ord-body"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "ord-head"
+  }, /*#__PURE__*/React.createElement("b", null, o.book_title || "—"), /*#__PURE__*/React.createElement("span", {
+    className: "st st-" + (o.status || "yangi")
+  }, o.status || "yangi")), /*#__PURE__*/React.createElement("div", {
+    className: "ord-meta"
+  }, "\uD83D\uDC76 ", o.child_name || "—", o.child_age ? `, ${o.child_age} yosh` : "", " \xB7 ", o.book_lang === "ru" ? "RU" : "UZ"), /*#__PURE__*/React.createElement("div", {
+    className: "ord-meta"
+  }, "\uD83D\uDC64 ", o.customer_name || "—", " \xB7 \uD83D\uDCDE ", o.phone || "—"), /*#__PURE__*/React.createElement("div", {
+    className: "ord-meta"
+  }, "\uD83D\uDCCD ", o.city || "", " ", o.address || ""), o.dedication && /*#__PURE__*/React.createElement("div", {
+    className: "ord-meta"
+  }, "\u270D\uFE0F ", o.dedication), /*#__PURE__*/React.createElement("div", {
+    className: "ord-meta",
+    style: {
+      opacity: .6
+    }
+  }, o.total_price ? fmtPrice(o.total_price) + " so‘m" : "", " \xB7 ", o.created_at ? new Date(o.created_at).toLocaleString("ru-RU") : ""), /*#__PURE__*/React.createElement("div", {
+    className: "ord-actions"
+  }, ["yangi", "tayyorlanmoqda", "yuborildi", "bekor"].map(s => /*#__PURE__*/React.createElement("button", {
+    key: s,
+    className: o.status === s ? "on" : "",
+    onClick: () => setStatus(o.id, s)
+  }, s)))))));
+}
+function AdminBooks() {
+  const [books, setBooks] = useState(null);
+  const load = async () => {
+    try {
+      setBooks(await sbAuthSelect("books", "order=created_at.desc"));
+    } catch {
+      setBooks([]);
+    }
+  };
+  useEffect(() => {
+    load();
+  }, []);
+  const toggle = async b => {
+    await sbAuthUpdate("books", b.id, {
+      is_active: !b.is_active
+    });
+    load();
+  };
+  const del = async b => {
+    if (confirm("Kitobni o‘chirasizmi?")) {
+      await sbAuthDelete("books", b.id);
+      load();
+    }
+  };
+  if (!books) return /*#__PURE__*/React.createElement("div", {
+    className: "muted"
+  }, "Yuklanmoqda\u2026");
+  if (books.length === 0) return /*#__PURE__*/React.createElement("div", {
+    className: "muted"
+  }, "Hozircha kitob yo\u2018q. \"Kitob qo\u2018shish\" dan boshlang.");
+  return /*#__PURE__*/React.createElement("div", {
+    className: "bk-list"
+  }, books.map(b => /*#__PURE__*/React.createElement("div", {
+    className: "bk-card",
+    key: b.id
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bk-cover",
+    style: {
+      background: `linear-gradient(160deg, hsl(${b.hue ?? 262} 70% 92%), hsl(${b.hue ?? 262} 60% 80%))`
+    }
+  }, b.cover_url ? /*#__PURE__*/React.createElement("img", {
+    src: b.cover_url,
+    alt: ""
+  }) : /*#__PURE__*/React.createElement("span", null, b.emoji || "📖")), /*#__PURE__*/React.createElement("div", {
+    className: "bk-body"
+  }, /*#__PURE__*/React.createElement("b", null, b.title_uz), /*#__PURE__*/React.createElement("div", {
+    className: "muted"
+  }, b.price ? fmtPrice(b.price) + " so‘m" : "narx yo‘q", " \xB7 ", b.age_range || "—", " \xB7 ", b.pages || 0, " bet"), /*#__PURE__*/React.createElement("div", {
+    className: "bk-actions"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => toggle(b)
+  }, b.is_active ? "👁 Faol" : "🚫 Yashirin"), /*#__PURE__*/React.createElement("button", {
+    className: "del",
+    onClick: () => del(b)
+  }, "O\u2018chirish"))))));
+}
+function AdminAddBook({
+  onDone
+}) {
+  const [f, setF] = useState({
+    title_uz: "",
+    title_ru: "",
+    desc_uz: "",
+    desc_ru: "",
+    price: "",
+    age_range: "",
+    pages: "",
+    badge: "",
+    gender: "",
+    emoji: "📖",
+    hue: "262",
+    free_pages: "2"
+  });
+  const [cover, setCover] = useState(null);
+  const [coverUrl, setCoverUrl] = useState("");
+  const [pageFiles, setPageFiles] = useState({
+    uz: [],
+    ru: [],
+    en: []
+  });
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState("");
+  const [err, setErr] = useState("");
+  const coverRef = useRef(null);
+  const set = (k, v) => setF(s => ({
+    ...s,
+    [k]: v
+  }));
+  const onCover = file => {
+    if (!file) return;
+    setCover(file);
+    setCoverUrl(URL.createObjectURL(file));
+  };
+  const setPages = (lang, files) => setPageFiles(p => ({
+    ...p,
+    [lang]: Array.from(files || [])
+  }));
+  const uploadPages = async (files, lang) => {
+    const urls = [];
+    for (let i = 0; i < files.length; i++) {
+      setProgress(`${lang.toUpperCase()}: ${i + 1}/${files.length} bet yuklanmoqda…`);
+      try {
+        urls.push(await sbUploadFile(files[i], "pages"));
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+    return urls;
+  };
+  const save = async () => {
+    if (!f.title_uz.trim()) {
+      setErr("Kamida o‘zbekcha nom kiriting.");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    setProgress("");
+    try {
+      let cover_url = null;
+      if (cover) {
+        try {
+          cover_url = await sbUploadCover(cover);
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+      const pages_uz = pageFiles.uz.length ? await uploadPages(pageFiles.uz, "uz") : [];
+      const pages_ru = pageFiles.ru.length ? await uploadPages(pageFiles.ru, "ru") : [];
+      const pages_en = pageFiles.en.length ? await uploadPages(pageFiles.en, "en") : [];
+      setProgress("Saqlanmoqda…");
+      await sbAuthInsert("books", {
+        title_uz: f.title_uz,
+        title_ru: f.title_ru || null,
+        desc_uz: f.desc_uz || null,
+        desc_ru: f.desc_ru || null,
+        price: f.price ? Number(f.price) : 0,
+        age_range: f.age_range || null,
+        pages: f.pages ? Number(f.pages) : pages_uz.length || pages_ru.length || null,
+        badge: f.badge || null,
+        gender: f.gender || null,
+        emoji: f.emoji || "📖",
+        hue: f.hue ? Number(f.hue) : 262,
+        cover_url,
+        pages_uz,
+        pages_ru,
+        pages_en,
+        free_pages: f.free_pages ? Number(f.free_pages) : 2,
+        is_active: true
+      });
+      onDone();
+    } catch (e) {
+      setErr("Saqlashda xato: " + e.message);
+    } finally {
+      setBusy(false);
+      setProgress("");
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "add-form"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "co-grid"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "Nom (UZ) *"), /*#__PURE__*/React.createElement("input", {
+    className: "inp",
+    value: f.title_uz,
+    onChange: e => set("title_uz", e.target.value)
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "Nom (RU)"), /*#__PURE__*/React.createElement("input", {
+    className: "inp",
+    value: f.title_ru,
+    onChange: e => set("title_ru", e.target.value)
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "co-grid"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "Tavsif (UZ)"), /*#__PURE__*/React.createElement("textarea", {
+    className: "ta",
+    value: f.desc_uz,
+    onChange: e => set("desc_uz", e.target.value)
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "Tavsif (RU)"), /*#__PURE__*/React.createElement("textarea", {
+    className: "ta",
+    value: f.desc_ru,
+    onChange: e => set("desc_ru", e.target.value)
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "co-grid3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "Narx (so\u2018m)"), /*#__PURE__*/React.createElement("input", {
+    className: "inp",
+    type: "number",
+    value: f.price,
+    onChange: e => set("price", e.target.value)
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "Yosh (3\u20136)"), /*#__PURE__*/React.createElement("input", {
+    className: "inp",
+    value: f.age_range,
+    onChange: e => set("age_range", e.target.value)
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "Sahifa soni"), /*#__PURE__*/React.createElement("input", {
+    className: "inp",
+    type: "number",
+    value: f.pages,
+    onChange: e => set("pages", e.target.value)
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "co-grid3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "Badge"), /*#__PURE__*/React.createElement("select", {
+    className: "inp",
+    value: f.badge,
+    onChange: e => set("badge", e.target.value)
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "\u2014 yo\u2018q \u2014"), /*#__PURE__*/React.createElement("option", {
+    value: "best"
+  }, "TOP"), /*#__PURE__*/React.createElement("option", {
+    value: "new"
+  }, "YANGI"))), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "Kim uchun"), /*#__PURE__*/React.createElement("select", {
+    className: "inp",
+    value: f.gender,
+    onChange: e => set("gender", e.target.value)
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "\u2014 ikkalasi \u2014"), /*#__PURE__*/React.createElement("option", {
+    value: "boy"
+  }, "O\u2018g\u2018il bola"), /*#__PURE__*/React.createElement("option", {
+    value: "girl"
+  }, "Qiz bola"))), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "Emoji (rasm yo\u2018q bo\u2018lsa)"), /*#__PURE__*/React.createElement("input", {
+    className: "inp",
+    value: f.emoji,
+    onChange: e => set("emoji", e.target.value)
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "Muqova rasmi"), !coverUrl ? /*#__PURE__*/React.createElement("div", {
+    className: "drop",
+    onClick: () => coverRef.current?.click()
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "ic"
+  }, "\uD83D\uDDBC"), /*#__PURE__*/React.createElement("p", null, "Muqova rasmini tanlang")) : /*#__PURE__*/React.createElement("div", {
+    className: "photo-prev"
+  }, /*#__PURE__*/React.createElement("img", {
+    src: coverUrl,
+    alt: ""
+  }), /*#__PURE__*/React.createElement("button", {
+    className: "x",
+    onClick: () => {
+      setCover(null);
+      setCoverUrl("");
+    }
+  }, "\u2715")), /*#__PURE__*/React.createElement("input", {
+    ref: coverRef,
+    type: "file",
+    accept: "image/*",
+    style: {
+      display: "none"
+    },
+    onChange: e => onCover(e.target.files?.[0])
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "Kitob betlari \u2014 rasmlar (har til uchun, tartibda tanlang)"), /*#__PURE__*/React.createElement("div", {
+    className: "pdf-row"
+  }, [["uz", "🇺🇿 O‘zbekcha betlar"], ["ru", "🇷🇺 Ruscha betlar"], ["en", "🇬🇧 Inglizcha betlar"]].map(([lng, lbl]) => /*#__PURE__*/React.createElement("label", {
+    key: lng,
+    className: "pdf-pick"
+  }, /*#__PURE__*/React.createElement("span", null, lbl), /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    accept: "image/*",
+    multiple: true,
+    onChange: e => setPages(lng, e.target.files)
+  }), /*#__PURE__*/React.createElement("small", null, pageFiles[lng].length ? `✓ ${pageFiles[lng].length} ta bet` : "tanlanmagan")))), /*#__PURE__*/React.createElement("small", {
+    className: "muted",
+    style: {
+      padding: "6px 0",
+      display: "block"
+    }
+  }, "Har betni alohida rasm qiling (1-bet, 2-bet\u2026). Bir vaqtda hammasini tanlang \u2014 tartibi fayl nomi bo\u2018yicha bo\u2018ladi, shuning uchun 01.jpg, 02.jpg deb nomlang.")), /*#__PURE__*/React.createElement("div", {
+    className: "field",
+    style: {
+      maxWidth: 240
+    }
+  }, /*#__PURE__*/React.createElement("label", null, "Nechta bet bepul ko\u2018rinsin?"), /*#__PURE__*/React.createElement("input", {
+    className: "inp",
+    type: "number",
+    value: f.free_pages,
+    onChange: e => set("free_pages", e.target.value)
+  }), /*#__PURE__*/React.createElement("small", {
+    className: "muted"
+  }, "Qolgan betlar watermark bilan yopiq bo\u2018ladi.")), progress && /*#__PURE__*/React.createElement("div", {
+    className: "status wait",
+    style: {
+      marginTop: 8
+    }
+  }, progress), err && /*#__PURE__*/React.createElement("div", {
+    className: "err-box"
+  }, err), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-pri btn-block",
+    disabled: busy,
+    onClick: save
+  }, busy ? "Saqlanmoqda…" : "✦ Kitobni saqlash"));
+}
+
+/* ------------------------------- footer -------------------------------- */
+function Footer({
+  t,
+  go
+}) {
+  return /*#__PURE__*/React.createElement("footer", {
+    className: "ft"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "wrap ft-grid"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "logo"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "logo-star"
+  }, "\u2726"), " ", BRAND), /*#__PURE__*/React.createElement("p", null, t.footer_tag)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", null, t.footer_nav), /*#__PURE__*/React.createElement("ul", null, /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("a", {
+    onClick: () => go({
+      name: "catalog"
+    })
+  }, t.nav_books)), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("a", {
+    onClick: () => go({
+      name: "home"
+    })
+  }, t.nav_how)), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("a", null, t.nav_support)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", null, t.footer_contact), /*#__PURE__*/React.createElement("ul", null, /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("a", null, "Instagram")), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("a", null, "Telegram")), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("a", null, PHONE))))), /*#__PURE__*/React.createElement("div", {
+    className: "wrap ft-base"
+  }, "\xA9 2026 ", BRAND_DOMAIN, " \xB7 ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      cursor: "pointer",
+      opacity: .6
+    },
+    onClick: () => go({
+      name: "admin"
+    })
+  }, "Admin")));
+}
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(Ertaklar));
+</script>
+</body>
+</html>
