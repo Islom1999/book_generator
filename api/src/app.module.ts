@@ -9,6 +9,7 @@ import { Order } from './entities/order.entity';
 import { Personalization } from './entities/personalization.entity';
 import { User } from './entities/user.entity';
 import { OpenRouterModule } from './openrouter/openrouter.module';
+import { ReplicateModule } from './replicate/replicate.module';
 import { OrdersModule } from './orders/orders.module';
 import { PersonalizationsModule } from './personalizations/personalizations.module';
 import { SeedModule } from './seed/seed.module';
@@ -30,6 +31,7 @@ import { SeedModule } from './seed/seed.module';
       }),
     }),
     OpenRouterModule,
+    ReplicateModule,
     AuthModule,
     BooksModule,
     PersonalizationsModule,

@@ -31,7 +31,7 @@ export const ANOR_PAGES: TemplatePage[] = [
     textRu:
       'Звезда осталась в глазах {{name}}. Теперь каждое небо ждёт его(её). Конец.',
     scene:
-      'WonderWraps-style interior, waist-up on a tree branch: one child LARGE in the foreground reaching toward a glowing star. Village through leaves behind. Keep this camera distance.',
+      'WonderWraps-style interior, waist-up on a tree branch: one child LARGE in the foreground reaching toward a glowing star with a normal five-finger hand. Village through leaves behind. Keep this camera distance.',
     hasChild: true,
   },
 ];

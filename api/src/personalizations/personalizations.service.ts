@@ -13,6 +13,7 @@ import { In, Repository } from 'typeorm';
 import { BooksService } from '../books/books.service';
 import { Personalization, StoryPage } from '../entities/personalization.entity';
 import { OpenRouterService } from '../openrouter/openrouter.service';
+import { ReplicateService } from '../replicate/replicate.service';
 import { PdfService } from './pdf.service';
 
 @Injectable()
@@ -24,6 +25,7 @@ export class PersonalizationsService {
     private readonly repo: Repository<Personalization>,
     private readonly books: BooksService,
     private readonly ai: OpenRouterService,
+    private readonly faces: ReplicateService,
     private readonly config: ConfigService,
     private readonly pdf: PdfService,
   ) {}
@@ -91,15 +93,36 @@ export class PersonalizationsService {
   async generateFull(id: string) {
     const row = await this.repo.findOne({ where: { id } });
     if (!row) throw new NotFoundException('Topilmadi');
-    if (row.status === 'ready' || row.status === 'generating_full') {
+    if (row.status === 'generating_full') {
       return this.toDto(row);
     }
+    // Force re-swap if pages still point at raw templates (failed run).
+    row.pages = (row.pages || []).map((p) =>
+      p.hasChild !== false ? { ...p, imageUrl: null } : p,
+    );
     row.status = 'generating_full';
     await this.repo.save(row);
-    void this.runImages(row.id, 0).catch((e) =>
+    void this.refreshLookThenImages(row.id).catch((e) =>
       this.logger.error(`full ${row.id}`, e),
     );
     return this.toDto(row);
+  }
+
+  private async refreshLookThenImages(id: string) {
+    const row = await this.repo.findOne({ where: { id } });
+    if (!row) return;
+    try {
+      const photoB64 = this.fileToDataUrl(this.absFromUrl(row.photoUrl));
+      row.characterDescription = await this.ai.describeChild(
+        photoB64,
+        row.childAge,
+        row.gender,
+      );
+    } catch (e) {
+      this.logger.warn(`vision refresh failed: ${e}`);
+    }
+    await this.repo.save(row);
+    await this.runImages(id, 0);
   }
 
   private fill(template: string, row: Personalization) {
@@ -176,7 +199,15 @@ export class PersonalizationsService {
       const targets = row.pages.filter(
         (p) => !p.imageUrl && (limit <= 0 || p.pageNumber <= limit),
       );
-      await this.mapLimit(targets, 2, async (page) => {
+      const seed = this.seedFromId(row.id);
+      const identity = {
+        gender: row.gender,
+        age: row.childAge,
+        name: row.childName,
+        look: row.characterDescription || undefined,
+        seed,
+      };
+      await this.mapLimit(targets, 1, async (page) => {
         try {
           if (!page.hasChild || !page.templateImageUrl) {
             page.imageUrl = page.templateImageUrl || null;
@@ -184,13 +215,21 @@ export class PersonalizationsService {
             const templateB64 = this.fileToDataUrl(
               this.absFromUrl(page.templateImageUrl),
             );
-            const b64 = await this.ai.swapFace(templateB64, photoB64, {
-              gender: row.gender,
-              age: row.childAge,
-              name: row.childName,
-              scene: page.imagePrompt,
-              look: row.characterDescription || undefined,
-            });
+            let b64: string;
+            if (this.faces.enabled) {
+              b64 = await this.faces.swapFace(photoB64, templateB64, {
+                ...identity,
+                scene: page.imagePrompt,
+              });
+            } else {
+              b64 = await this.ai.swapFace(templateB64, photoB64, {
+                gender: row.gender,
+                age: row.childAge,
+                name: row.childName,
+                scene: page.imagePrompt,
+                look: row.characterDescription || undefined,
+              });
+            }
             page.imageUrl = this.saveBase64(b64, 'pages');
           }
         } catch (e) {
@@ -255,6 +294,12 @@ export class PersonalizationsService {
     const idx = url.indexOf('/uploads/');
     const rel = idx >= 0 ? url.slice(idx + '/uploads/'.length) : url;
     return join(process.cwd(), 'uploads', rel);
+  }
+
+  private seedFromId(id: string) {
+    const hex = id.replace(/-/g, '').slice(0, 8);
+    const n = Number.parseInt(hex, 16);
+    return Number.isFinite(n) ? n % 2147483647 : 42;
   }
 
   private fileToDataUrl(absPath: string) {

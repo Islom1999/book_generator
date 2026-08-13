@@ -71,7 +71,7 @@ export class OpenRouterService {
           content: [
             {
               type: 'text',
-              text: `Describe this child's appearance for a consistent children's book illustration character sheet. Age about ${age}, gender: ${gender}. Include: hair color/style, skin tone, eye color, face shape, notable features. 2-4 sentences, English, no name. Do not mention photo quality.`,
+              text: `Describe this ${age}-year-old ${gender} for a children's-book character. Be precise about GENDER and HAIR: length (buzz/short/ear/chin/shoulder/long), texture (straight/wavy/curly/coily), color, fringe. Also skin tone, eye color, face shape, smile. 2-4 sentences, English, no name, no clothes, no photo quality.`,
             },
             { type: 'image_url', image_url: { url: photoDataUrl } },
           ],

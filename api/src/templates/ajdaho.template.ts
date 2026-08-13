@@ -9,14 +9,16 @@ export interface TemplatePage {
 
 export const AJDAHO_SLUG = 'amir-va-ajdaho';
 
+const WW =
+  'WonderWraps medium shot, child LARGE in foreground (waist-up / 3/4). Full-bleed, no cream band, no headshot, not a distant figure.';
+
 export const AJDAHO_PAGES: TemplatePage[] = [
   {
     pageNumber: 1,
     file: 'page-01-cover.jpg',
     textUz: 'Sevimli {{name}}ga. {{age}} yoshing muborak!',
     textRu: 'Любимому {{name}}. С {{age}}-летием!',
-    scene:
-      'Cover: child hugging a friendly round purple-gold dragon on a hillside at sunset, apricot tree, village and mountains. Empty cream band at the bottom 28% for text.',
+    scene: `${WW} Cover: child hugging a friendly purple-gold dragon, apricot tree and village behind.`,
     hasChild: true,
   },
   {
@@ -26,8 +28,7 @@ export const AJDAHO_PAGES: TemplatePage[] = [
       '{{name}} ertalab derazani ochdi. Quyosh kulib turardi. Bugun yangi sarguzasht uni kutardi.',
     textRu:
       '{{name}} утром открыл(а) окно. Солнце улыбалось. Сегодня ждало новое приключение.',
-    scene:
-      'Child in red vest opening a wooden window in a clay village house, swallows, pink blossoms, mountains, morning sun. Empty cream band at bottom 28%.',
+    scene: `${WW} Child opening a wooden window, swallows, pink blossoms, morning sun.`,
     hasChild: true,
   },
   {
@@ -35,8 +36,7 @@ export const AJDAHO_PAGES: TemplatePage[] = [
     file: 'page-03-path.jpg',
     textUz: 'U nonini olib tog‘ yo‘liga chiqdi. Gullar salom berdi. Yuragi dadil edi.',
     textRu: 'Он(а) взял(а) хлеб и пошёл(шла) в горы. Цветы здоровались. Сердце было смелым.',
-    scene:
-      'EXACTLY ONE child walking the mountain path carrying bread and flowers. Do not add a second child. Yurts and snow mountains behind. Empty cream band at bottom 28%.',
+    scene: `${WW} Exactly ONE child on a mountain path with bread and flowers, yurts behind.`,
     hasChild: true,
   },
   {
@@ -47,7 +47,7 @@ export const AJDAHO_PAGES: TemplatePage[] = [
     textRu:
       'За скалами сидел одинокий дракон. Он был не страшный — просто искал друга.',
     scene:
-      'A shy cute round purple-gold dragon peeking from behind rocks, pastel sunset mountains. Empty cream band at bottom 28%. Keep the dragon, no child required.',
+      'Full-bleed: shy cute purple-gold dragon peeking from rocks, sunset mountains. No child.',
     hasChild: false,
   },
   {
@@ -57,8 +57,7 @@ export const AJDAHO_PAGES: TemplatePage[] = [
       '{{name}} nonini ajdaho bilan bo‘lishdi. Mehribonlik qo‘rquvni do‘stlikka aylantirdi.',
     textRu:
       '{{name}} поделился(ась) хлебом с драконом. Доброта превратила страх в дружбу.',
-    scene:
-      'Child sharing bread with the friendly purple-gold dragon in an apricot orchard. Empty cream band at bottom 28%.',
+    scene: `${WW} Child sharing bread with the friendly purple-gold dragon in an apricot orchard.`,
     hasChild: true,
   },
   {
@@ -68,8 +67,7 @@ export const AJDAHO_PAGES: TemplatePage[] = [
       'Yangi do‘st {{name}}ni osmon bo‘ylab uchirdi. Qishloq pastda oltindek porlardi.',
     textRu:
       'Новый друг прокатил {{name}} по небу. Внизу деревня сияла золотом.',
-    scene:
-      'Child riding the friendly purple-gold dragon over a Central Asian city at golden sunset. Empty cream band at bottom 28%.',
+    scene: `${WW} Child riding the purple-gold dragon over a Central Asian city at sunset.`,
     hasChild: true,
   },
   {
@@ -79,8 +77,7 @@ export const AJDAHO_PAGES: TemplatePage[] = [
       'Uyga qaytib, {{name}} tinch uxlab qoldi. Ajdaho esa qishloqni mehr bilan qo‘riqladi. Oxiri.',
     textRu:
       'Вернувшись домой, {{name}} спокойно заснул(а). Дракон бережно сторожил деревню. Конец.',
-    scene:
-      'Child sleeping in a cozy bedroom, window shows the dragon curled on a hill over a starry village. Empty cream band at bottom 28%.',
+    scene: `${WW} Child sleeping in bed, window shows the dragon on a hill over a starry village.`,
     hasChild: true,
   },
 ];

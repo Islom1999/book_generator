@@ -59,6 +59,11 @@ export class PersonalizationsController {
     );
   }
 
+  @Post(':id/generate')
+  generate(@Param('id') id: string) {
+    return this.service.generateFull(id);
+  }
+
   @Get(':id/pdf')
   @Header('Content-Type', 'application/pdf')
   async pdf(@Param('id') id: string, @Res() res: Response) {
