@@ -1,0 +1,34 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  SERVER_HOST: 94.130.33.123
+  SERVER_USERNAME: root
+  SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_PASSWORD }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Connect to server and deploy frontend
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ env.SERVER_HOST }}
+          username: ${{ env.SERVER_USERNAME }}
+          password: ${{ env.SSH_PRIVATE_KEY }}
+          script: |
+            cd /root/book_generator
+            git pull
+
+            cd /root/book_generator/web
+            npm install
+            npm run build
+
+            sudo rsync -av --delete \
+              /root/book_generator/web/dist/web/browser/ \
+              /var/www/ertaklar.topsites.uz/

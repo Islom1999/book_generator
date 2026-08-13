@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { I18nService } from '../core/i18n.service';
@@ -16,16 +16,22 @@ import { BookCardComponent } from '../shared/book-card.component';
           <h1>{{ i18n.t('hero_title') }}</h1>
           <p class="hero-sub">{{ i18n.t('hero_sub') }}</p>
           <div class="hero-cta">
-            <a class="btn btn-pri" routerLink="/books">✦ {{ i18n.t('hero_cta') }}</a>
+            <a class="btn btn-pri" [routerLink]="featured() ? ['/books', featured()!.slug, 'personalize'] : '/books'">✦ {{ i18n.t('hero_cta') }}</a>
             <a class="btn btn-ghost" routerLink="/books">{{ i18n.t('hero_cta2') }}</a>
           </div>
         </div>
         <div class="hero-motion">
           <div class="motion-stage">
-            <div class="book-mock" style="background:linear-gradient(160deg,#6c5ce7,#2c2358)">
-              <div>🐉</div>
-              <small>Botir va Ajdaho</small>
-            </div>
+            @if (featured(); as b) {
+              <a class="book-mock" [routerLink]="['/books', b.slug]">
+                @if (b.coverUrl) {
+                  <img [src]="b.coverUrl" [alt]="i18n.title(b)" />
+                } @else {
+                  <span>{{ b.emoji }}</span>
+                  <small>{{ i18n.title(b) }}</small>
+                }
+              </a>
+            }
           </div>
         </div>
       </div>
@@ -68,6 +74,13 @@ export class HomeComponent implements OnInit {
   i18n = inject(I18nService);
   private api = inject(ApiService);
   books = signal<Book[]>([]);
+  featured = computed(
+    () =>
+      this.books().find((b) => b.slug === 'amir-va-ajdaho') ||
+      this.books().find((b) => b.badge === 'best') ||
+      this.books()[0] ||
+      null,
+  );
   steps = [
     { n: 1, t: 'how_1_t', d: 'how_1_d' },
     { n: 2, t: 'how_2_t', d: 'how_2_d' },

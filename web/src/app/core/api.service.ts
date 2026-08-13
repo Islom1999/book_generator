@@ -1,39 +1,42 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
 import { Book, Order, Personalization } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
+  private readonly base = environment.apiBase;
+
   constructor(private http: HttpClient) {}
 
   books() {
-    return firstValueFrom(this.http.get<Book[]>('/api/books'));
+    return firstValueFrom(this.http.get<Book[]>(`${this.base}/api/books`));
   }
 
   book(slug: string) {
-    return firstValueFrom(this.http.get<Book>(`/api/books/${slug}`));
+    return firstValueFrom(this.http.get<Book>(`${this.base}/api/books/${slug}`));
   }
 
   createPersonalization(form: FormData) {
-    return firstValueFrom(this.http.post<Personalization>('/api/personalizations', form));
+    return firstValueFrom(this.http.post<Personalization>(`${this.base}/api/personalizations`, form));
   }
 
   personalization(id: string) {
-    return firstValueFrom(this.http.get<Personalization>(`/api/personalizations/${id}`));
+    return firstValueFrom(this.http.get<Personalization>(`${this.base}/api/personalizations/${id}`));
   }
 
   personalizations(ids: string[]) {
     if (!ids.length) return Promise.resolve([] as Personalization[]);
     return firstValueFrom(
-      this.http.get<Personalization[]>(`/api/personalizations`, {
+      this.http.get<Personalization[]>(`${this.base}/api/personalizations`, {
         params: { ids: ids.join(',') },
       }),
     );
   }
 
   pdfUrl(id: string) {
-    return `/api/personalizations/${id}/pdf`;
+    return `${this.base}/api/personalizations/${id}/pdf`;
   }
 
   createOrder(body: {
@@ -44,12 +47,12 @@ export class ApiService {
     paymentMethod: string;
     items: { personalizationId: string }[];
   }) {
-    return firstValueFrom(this.http.post<Order>('/api/orders', body));
+    return firstValueFrom(this.http.post<Order>(`${this.base}/api/orders`, body));
   }
 
   login(email: string, password: string) {
     return firstValueFrom(
-      this.http.post<{ accessToken: string; user: { email: string } }>('/api/auth/login', {
+      this.http.post<{ accessToken: string; user: { email: string } }>(`${this.base}/api/auth/login`, {
         email,
         password,
       }),
@@ -57,10 +60,10 @@ export class ApiService {
   }
 
   orders() {
-    return firstValueFrom(this.http.get<Order[]>('/api/orders'));
+    return firstValueFrom(this.http.get<Order[]>(`${this.base}/api/orders`));
   }
 
   updateOrder(id: string, status: string) {
-    return firstValueFrom(this.http.patch<Order>(`/api/orders/${id}`, { status }));
+    return firstValueFrom(this.http.patch<Order>(`${this.base}/api/orders/${id}`, { status }));
   }
 }
