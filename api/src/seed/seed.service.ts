@@ -9,8 +9,10 @@ import { Book } from '../entities/book.entity';
 import { User } from '../entities/user.entity';
 import { AJDAHO_PAGES, AJDAHO_SLUG, TemplatePage } from '../templates/ajdaho.template';
 import { ANOR_PAGES, ANOR_SLUG } from '../templates/anor.template';
+import { BAHOR_PAGES, BAHOR_SLUG } from '../templates/bahor-kapalagi.template';
+import { OY_TUYA_PAGES, OY_TUYA_SLUG } from '../templates/oy-tuya.template';
 
-const KNOWN_SLUGS = [AJDAHO_SLUG, ANOR_SLUG];
+const KNOWN_SLUGS = [AJDAHO_SLUG, ANOR_SLUG, OY_TUYA_SLUG, BAHOR_SLUG];
 
 @Injectable()
 export class SeedService implements OnModuleInit {
@@ -26,6 +28,8 @@ export class SeedService implements OnModuleInit {
     await this.seedAdmin();
     await this.seedAjdaho();
     await this.seedAnor();
+    await this.seedOyTuya();
+    await this.seedBahor();
     await this.books.update({ slug: Not(In(KNOWN_SLUGS)) }, { isActive: false });
   }
 
@@ -47,7 +51,7 @@ export class SeedService implements OnModuleInit {
       titleRu: 'Амир и добрый дракон',
       descUz: 'Mehribonlik qo‘rqinchli ajdahoni do‘stga aylantiradi. Bolangiz — bosh qahramon.',
       descRu: 'Доброта превращает дракона в друга. Ваш ребёнок — главный герой.',
-      price: 149000,
+      price: 129000,
       ageRange: '3–6',
       pageCount: AJDAHO_PAGES.length,
       freePages: AJDAHO_PAGES.length,
@@ -68,24 +72,72 @@ export class SeedService implements OnModuleInit {
       slug: ANOR_SLUG,
       titleUz: 'Anor yulduzi',
       titleRu: 'Гранатовая звезда',
-      descUz:
-        'Anor bog‘ida kichik yulduz charaqlaydi. Yirik, aniq yuzlar — bolangiz suratiga oson moslashadi.',
-      descRu:
-        'В гранатовом саду вспыхивает маленькая звезда. Крупные лица — легко подставить фото ребёнка.',
+      descUz: 'Anor bog‘ida kichik yulduz charaqlaydi. Bolangiz — bosh qahramon.',
+      descRu: 'В гранатовом саду вспыхивает маленькая звезда. Ваш ребёнок — главный герой.',
       price: 129000,
       ageRange: '3–6',
       pageCount: ANOR_PAGES.length,
       freePages: ANOR_PAGES.length,
-      badge: 'new',
+      badge: null,
       gender: null,
       hue: 12,
       emoji: '🌟',
-      themePrompt:
-        'Template: Anor yulduzi. Semi-realistic close-up faces. Replace the child with the uploaded photo; keep likeness, do not cartoonize.',
+      themePrompt: 'Template: Anor yulduzi. Replace the child with the uploaded photo.',
       folder: 'anor',
       pages: ANOR_PAGES,
     });
     this.logger.log('Template kitob tayyor: anor-yulduzi');
+  }
+
+  private async seedOyTuya() {
+    this.copyPages('oy-tuya', OY_TUYA_PAGES, join(process.cwd(), '..', 'sample-book', 'oy-tuya'));
+    await this.upsertBook({
+      slug: OY_TUYA_SLUG,
+      titleUz: 'Oy tuya',
+      titleRu: 'Лунный верблюд',
+      descUz: 'Oy yorug‘ida yumshoq tuya bilan sarguzasht. Bolangiz — bosh qahramon.',
+      descRu: 'Приключение с добрым верблюдом при луне. Ваш ребёнок — главный герой.',
+      price: 129000,
+      ageRange: '3–6',
+      pageCount: OY_TUYA_PAGES.length,
+      freePages: OY_TUYA_PAGES.length,
+      badge: 'new',
+      gender: null,
+      hue: 222,
+      emoji: '🌙',
+      themePrompt: 'Template: Oy tuya. Night desert, moon, gentle camel. Replace the child with the uploaded photo.',
+      folder: 'oy-tuya',
+      pages: OY_TUYA_PAGES,
+    });
+    this.logger.log('Template kitob tayyor: oy-tuya');
+  }
+
+  private async seedBahor() {
+    this.copyPages(
+      'bahor-kapalagi',
+      BAHOR_PAGES,
+      join(process.cwd(), '..', 'sample-book', 'bahor-kapalagi'),
+    );
+    await this.upsertBook({
+      slug: BAHOR_SLUG,
+      titleUz: 'Bahor kapalagi',
+      titleRu: 'Весенняя бабочка',
+      descUz: 'O‘rik bog‘ida do‘st kapalak. Bolangiz — bosh qahramon.',
+      descRu: 'Друг-бабочка в абрикосовом саду. Ваш ребёнок — главный герой.',
+      price: 129000,
+      ageRange: '3–6',
+      pageCount: BAHOR_PAGES.length,
+      freePages: BAHOR_PAGES.length,
+      badge: 'new',
+      gender: null,
+      hue: 330,
+      emoji: '🦋',
+      themePrompt:
+        'Template: Bahor kapalagi. Spring orchard, butterfly. Replace the child with the uploaded photo.',
+      folder: 'bahor-kapalagi',
+      pages: BAHOR_PAGES,
+    });
+    this.logger.log('Template kitob tayyor: bahor-kapalagi');
   }
 
   private copyPages(folder: string, pages: TemplatePage[], srcDir: string) {
@@ -110,7 +162,7 @@ export class SeedService implements OnModuleInit {
     ageRange: string;
     pageCount: number;
     freePages: number;
-    badge: string;
+    badge: string | null;
     gender: string | null;
     hue: number;
     emoji: string;
