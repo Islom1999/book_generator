@@ -3,13 +3,14 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { In, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { BooksService } from '../books/books.service';
 import { Personalization, StoryPage } from '../entities/personalization.entity';
 import { OpenRouterService } from '../openrouter/openrouter.service';
@@ -17,7 +18,7 @@ import { ReplicateService } from '../replicate/replicate.service';
 import { PdfService } from './pdf.service';
 
 @Injectable()
-export class PersonalizationsService {
+export class PersonalizationsService implements OnModuleInit {
   private readonly logger = new Logger(PersonalizationsService.name);
 
   constructor(
@@ -29,6 +30,16 @@ export class PersonalizationsService {
     private readonly config: ConfigService,
     private readonly pdf: PdfService,
   ) {}
+
+  async onModuleInit() {
+    const stuck = await this.repo.find({
+      where: [{ status: 'generating_preview' }, { status: 'generating_full' }],
+    });
+    for (const row of stuck) {
+      this.logger.warn(`resume interrupted job ${row.id} (${row.status})`);
+      void this.resume(row.id).catch((e) => this.logger.error(`resume ${row.id}`, e));
+    }
+  }
 
   async create(params: {
     bookId: string;
@@ -42,6 +53,7 @@ export class PersonalizationsService {
     if (!params.photo) {
       throw new BadRequestException('Surat yuklang');
     }
+    await this.assertChildPhoto(params.photo, Number(params.childAge));
     const book = await this.books.getById(params.bookId);
     const photoUrl = this.saveUpload(params.photo, 'photos');
     const row = await this.repo.save(
@@ -63,14 +75,63 @@ export class PersonalizationsService {
     return this.toDto(row);
   }
 
+  async inspect(photo: Express.Multer.File, childAge: number) {
+    if (!photo) throw new BadRequestException('Surat yuklang');
+    await this.assertChildPhoto(photo, childAge);
+    return { ok: true };
+  }
+
+  private async assertChildPhoto(photo: Express.Multer.File, childAge: number) {
+    if (!this.ai.enabled) return;
+    const mime = photo.mimetype || 'image/jpeg';
+    const dataUrl = `data:${mime};base64,${photo.buffer.toString('base64')}`;
+    let info: Awaited<ReturnType<OpenRouterService['inspectPhoto']>>;
+    try {
+      info = await this.ai.inspectPhoto(dataUrl);
+    } catch (e) {
+      this.logger.warn(`photo inspect failed: ${e}`);
+      return;
+    }
+    this.logger.log(
+      `photo inspect ageBand=${info.ageBand} est=${info.estimatedAge} child=${info.isChild} face=${info.faceVisible} faces=${info.faceCount} children=${info.childCount} adults=${info.adultCount} declared=${childAge}`,
+    );
+    if (!info.faceVisible || info.faceCount < 1) {
+      throw new BadRequestException('PHOTO_NO_FACE');
+    }
+    if (info.adultCount > 0 && info.childCount > 0) {
+      throw new BadRequestException('PHOTO_HAS_ADULT');
+    }
+    if (info.faceCount > 1 || info.childCount > 1) {
+      throw new BadRequestException('PHOTO_MULTI');
+    }
+    if (info.ageBand === 'adult' || info.estimatedAge >= 16 || info.adultCount > 0 || !info.isChild) {
+      throw new BadRequestException('PHOTO_ADULT');
+    }
+    if (info.ageBand === 'teen' || info.estimatedAge >= 13) {
+      throw new BadRequestException('PHOTO_TEEN');
+    }
+  }
+
   async get(id: string) {
-    const row = await this.repo.findOne({ where: { id } });
+    const row = await this.repo.findOne({ where: { id, deletedAt: IsNull() } });
     if (!row) throw new NotFoundException('Topilmadi');
     return this.toDto(row);
   }
 
+  async softDelete(id: string, reason?: string) {
+    const row = await this.repo.findOne({ where: { id } });
+    if (!row) throw new NotFoundException('Topilmadi');
+    if (reason) {
+      row.errorMessage = reason;
+      await this.repo.save(row);
+    }
+    await this.repo.softDelete(id);
+    return { ok: true, id };
+  }
+
   async listAll() {
     const rows = await this.repo.find({
+      where: { deletedAt: IsNull() },
       order: { createdAt: 'DESC' },
       take: 100,
     });
@@ -80,7 +141,7 @@ export class PersonalizationsService {
   async listByIds(ids: string[]) {
     if (!ids.length) return [];
     const rows = await this.repo.find({
-      where: { id: In(ids.slice(0, 50)) },
+      where: { id: In(ids.slice(0, 50)), deletedAt: IsNull() },
       order: { createdAt: 'DESC' },
     });
     const order = new Map(ids.map((id, i) => [id, i]));
@@ -90,7 +151,7 @@ export class PersonalizationsService {
   }
 
   async buildPdf(id: string) {
-    const row = await this.repo.findOne({ where: { id } });
+    const row = await this.repo.findOne({ where: { id, deletedAt: IsNull() } });
     if (!row) throw new NotFoundException('Topilmadi');
     if (!row.pages?.length) {
       throw new BadRequestException('Kitob hali tayyor emas');
@@ -99,9 +160,10 @@ export class PersonalizationsService {
   }
 
   async generateFull(id: string) {
-    const row = await this.repo.findOne({ where: { id } });
+    const row = await this.repo.findOne({ where: { id, deletedAt: IsNull() } });
     if (!row) throw new NotFoundException('Topilmadi');
-    if (row.status === 'generating_full') {
+    const missing = (row.pages || []).some((p) => p.hasChild !== false && !p.imageUrl);
+    if (row.status === 'generating_full' && !missing) {
       return this.toDto(row);
     }
     // Force re-swap if pages still point at raw templates (failed run).
@@ -114,6 +176,28 @@ export class PersonalizationsService {
       this.logger.error(`full ${row.id}`, e),
     );
     return this.toDto(row);
+  }
+
+  private async resume(id: string) {
+    const row = await this.repo.findOne({ where: { id } });
+    if (!row || row.deletedAt) return;
+    if (!row.pages?.length) {
+      await this.runPreview(id);
+      return;
+    }
+    const missing = row.pages.some((p) => p.hasChild !== false && !p.imageUrl);
+    if (!missing) {
+      row.status = 'ready';
+      await this.repo.save(row);
+      return;
+    }
+    row.status = 'generating_full';
+    await this.repo.save(row);
+    if (!row.characterDescription && this.ai.enabled) {
+      await this.refreshLookThenImages(id);
+      return;
+    }
+    await this.runImages(id, 0);
   }
 
   private async refreshLookThenImages(id: string) {

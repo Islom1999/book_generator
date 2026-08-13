@@ -56,7 +56,12 @@ import { ResultsService } from '../core/results.service';
         @if (err()) {
           <p class="err">{{ err() }}</p>
         }
-        @if (submitting()) {
+        @if (checking()) {
+          <div class="gen">
+            <div class="spin"></div>
+            <p>{{ i18n.t('w_photo_checking') }}</p>
+          </div>
+        } @else if (submitting()) {
           <div class="gen">
             <div class="spin"></div>
             <p>{{ i18n.t('generating') }}</p>
@@ -90,6 +95,7 @@ export class WizardComponent implements OnInit {
   file: File | null = null;
   previewUrl = signal<string | null>(null);
   submitting = signal(false);
+  checking = signal(false);
   err = signal('');
   ages = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
@@ -99,7 +105,7 @@ export class WizardComponent implements OnInit {
   }
 
   canNext() {
-    if (this.submitting()) return false;
+    if (this.submitting() || this.checking()) return false;
     if (this.step() === 1) return !!(this.name.trim() && this.gender);
     if (this.step() === 2) return !!this.age;
     if (this.step() === 3) return !!this.file;
@@ -111,10 +117,24 @@ export class WizardComponent implements OnInit {
     const f = input.files?.[0];
     if (!f) return;
     this.file = f;
+    this.err.set('');
     this.previewUrl.set(URL.createObjectURL(f));
   }
 
   async next() {
+    if (this.step() === 3) {
+      this.err.set('');
+      this.checking.set(true);
+      try {
+        await this.validatePhoto();
+        this.step.set(4);
+      } catch (e: unknown) {
+        this.err.set(this.photoErr(e));
+      } finally {
+        this.checking.set(false);
+      }
+      return;
+    }
     if (this.step() < 4) {
       this.step.set(this.step() + 1);
       return;
@@ -139,9 +159,34 @@ export class WizardComponent implements OnInit {
       const created = await this.api.createPersonalization(fd);
       this.results.remember(created.id);
       await this.router.navigate(['/natijalar', created.id]);
-    } catch {
-      this.err.set(this.i18n.t('error'));
+    } catch (e: unknown) {
+      this.err.set(this.photoErr(e));
       this.submitting.set(false);
     }
+  }
+
+  private async validatePhoto() {
+    if (!this.file) throw new Error('PHOTO_NO_FACE');
+    const fd = new FormData();
+    fd.append('photo', this.file);
+    fd.append('childAge', this.age);
+    await this.api.inspectPhoto(fd);
+  }
+
+  private photoErr(e: unknown) {
+    const code = this.httpCode(e);
+    if (code === 'PHOTO_ADULT') return this.i18n.t('w_photo_adult');
+    if (code === 'PHOTO_TEEN') return this.i18n.t('w_photo_teen');
+    if (code === 'PHOTO_NO_FACE') return this.i18n.t('w_photo_no_face');
+    if (code === 'PHOTO_MULTI') return this.i18n.t('w_photo_multi');
+    if (code === 'PHOTO_HAS_ADULT') return this.i18n.t('w_photo_has_adult');
+    return this.i18n.t('error');
+  }
+
+  private httpCode(e: unknown): string {
+    if (!e || typeof e !== 'object' || !('error' in e)) return '';
+    const err = (e as { error?: { message?: string | string[] } }).error;
+    const msg = err?.message;
+    return Array.isArray(msg) ? String(msg[0] || '') : String(msg || '');
   }
 }

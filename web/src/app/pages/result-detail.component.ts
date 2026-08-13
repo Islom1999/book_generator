@@ -47,6 +47,9 @@ import { Personalization } from '../core/models';
                 }
                 <button class="btn btn-ghost" (click)="toCart(false)">{{ i18n.t('add_and_cart') }}</button>
                 <button class="btn btn-ghost" (click)="toCart(true)">{{ i18n.t('order_now') }}</button>
+                @if (isAdmin()) {
+                  <button class="btn btn-ghost" (click)="remove()">{{ i18n.t('results_delete') }}</button>
+                }
               </div>
             </div>
           </div>
@@ -86,6 +89,7 @@ export class ResultDetailComponent implements OnInit, OnDestroy {
   item = signal<Personalization | null>(null);
   loading = signal(true);
   busy = signal(false);
+  isAdmin = signal(!!localStorage.getItem('ert_token'));
   pdfSrc = signal<SafeResourceUrl | null>(null);
   private timer: ReturnType<typeof setInterval> | null = null;
   private sanitizer = inject(DomSanitizer);
@@ -145,5 +149,12 @@ export class ResultDetailComponent implements OnInit, OnDestroy {
     if (!r?.id) return;
     this.cart.add(r);
     void this.router.navigate([orderNow ? '/checkout' : '/cart']);
+  }
+
+  async remove() {
+    const r = this.item();
+    if (!r?.id || !confirm(this.i18n.t('results_delete_q'))) return;
+    await this.api.deletePersonalization(r.id);
+    await this.router.navigate(['/natijalar']);
   }
 }

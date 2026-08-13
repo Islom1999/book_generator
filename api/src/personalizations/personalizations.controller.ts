@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Header,
   Param,
@@ -8,11 +9,13 @@ import {
   Query,
   Res,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import type { Response } from 'express';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PersonalizationsService } from './personalizations.service';
 
 @Controller('personalizations')
@@ -49,6 +52,20 @@ export class PersonalizationsController {
     });
   }
 
+  @Post('inspect')
+  @UseInterceptors(
+    FileInterceptor('photo', {
+      storage: memoryStorage(),
+      limits: { fileSize: 8 * 1024 * 1024 },
+    }),
+  )
+  inspect(
+    @UploadedFile() photo: Express.Multer.File,
+    @Body() body: { childAge?: string },
+  ) {
+    return this.service.inspect(photo, Number(body.childAge) || 6);
+  }
+
   @Get()
   list(@Query('ids') ids?: string) {
     const parsed = (ids || '')
@@ -74,6 +91,12 @@ export class PersonalizationsController {
       `inline; filename="ertak-${id.slice(0, 8)}.pdf"`,
     );
     res.send(buf);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.service.softDelete(id);
   }
 
   @Get(':id')

@@ -63,6 +63,65 @@ export class OpenRouterService {
     return data?.choices?.[0]?.message?.content || '';
   }
 
+  async inspectPhoto(photoDataUrl: string): Promise<{
+    faceVisible: boolean;
+    isChild: boolean;
+    estimatedAge: number;
+    ageBand: 'toddler' | 'child' | 'teen' | 'adult' | 'unknown';
+    faceCount: number;
+    childCount: number;
+    adultCount: number;
+  }> {
+    const raw = await this.chat(
+      [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Analyze this photo for a children's storybook face-swap. Return ONLY JSON, no markdown:
+{"faceVisible":true,"isChild":true,"estimatedAge":6,"ageBand":"child","faceCount":1,"childCount":1,"adultCount":0}
+Rules:
+- Count EVERY visible human face, including background people.
+- faceCount: total human faces.
+- childCount: faces that look 12 or under.
+- adultCount: faces that look 18+ (also count obvious teens 13-17 here if they are not the only child).
+- faceVisible: true only if at least one clear human face is visible (front or 3/4).
+- estimatedAge / ageBand: for the MAIN/largest/closest face. ageBand: toddler (1-3), child (4-12), teen (13-17), adult (18+), unknown.
+- isChild: true only if the MAIN face is clearly 12 or under AND there is exactly ONE child AND adultCount is 0.
+- Group photo, siblings, parent+child, selfie with adult => childCount/adultCount must reflect that.`,
+            },
+            { type: 'image_url', image_url: { url: photoDataUrl } },
+          ],
+        },
+      ],
+      true,
+    );
+    const parsed = this.parseJson<{
+      faceVisible?: boolean;
+      isChild?: boolean;
+      estimatedAge?: number;
+      ageBand?: string;
+      faceCount?: number;
+      childCount?: number;
+      adultCount?: number;
+    }>(raw);
+    const band = parsed.ageBand;
+    const ageBand =
+      band === 'toddler' || band === 'child' || band === 'teen' || band === 'adult'
+        ? band
+        : 'unknown';
+    return {
+      faceVisible: Boolean(parsed.faceVisible),
+      isChild: Boolean(parsed.isChild),
+      estimatedAge: Number(parsed.estimatedAge) || 99,
+      ageBand,
+      faceCount: Number(parsed.faceCount) || 0,
+      childCount: Number(parsed.childCount) || 0,
+      adultCount: Number(parsed.adultCount) || 0,
+    };
+  }
+
   async describeChild(photoDataUrl: string, age: number, gender: string) {
     const text = await this.chat(
       [

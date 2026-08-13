@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { Order } from '../entities/order.entity';
 import { OrderItem } from '../entities/order-item.entity';
 import { Personalization } from '../entities/personalization.entity';
@@ -21,7 +21,7 @@ export class OrdersService {
     let total = 0;
     for (const it of dto.items) {
       const p = await this.personalizations.findOne({
-        where: { id: it.personalizationId },
+        where: { id: it.personalizationId, deletedAt: IsNull() },
       });
       if (!p) throw new NotFoundException('Shaxsiylashtirish topilmadi');
       total += p.book.price;

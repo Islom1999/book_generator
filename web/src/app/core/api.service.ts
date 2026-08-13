@@ -18,6 +18,12 @@ export class ApiService {
     return firstValueFrom(this.http.get<Book>(`${this.base}/api/books/${slug}`));
   }
 
+  inspectPhoto(form: FormData) {
+    return firstValueFrom(
+      this.http.post<{ ok: boolean }>(`${this.base}/api/personalizations/inspect`, form),
+    );
+  }
+
   createPersonalization(form: FormData) {
     return firstValueFrom(this.http.post<Personalization>(`${this.base}/api/personalizations`, form));
   }
@@ -41,6 +47,10 @@ export class ApiService {
 
   pdfUrl(id: string) {
     return `${this.base}/api/personalizations/${id}/pdf`;
+  }
+
+  deletePersonalization(id: string) {
+    return firstValueFrom(this.http.delete(`${this.base}/api/personalizations/${id}`));
   }
 
   createOrder(body: {
