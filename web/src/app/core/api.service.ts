@@ -26,12 +26,16 @@ export class ApiService {
     return firstValueFrom(this.http.get<Personalization>(`${this.base}/api/personalizations/${id}`));
   }
 
-  personalizations(ids: string[]) {
-    if (!ids.length) return Promise.resolve([] as Personalization[]);
+  personalizations(ids?: string[]) {
+    if (ids?.length) {
+      return firstValueFrom(
+        this.http.get<Personalization[]>(`${this.base}/api/personalizations`, {
+          params: { ids: ids.join(',') },
+        }),
+      );
+    }
     return firstValueFrom(
-      this.http.get<Personalization[]>(`${this.base}/api/personalizations`, {
-        params: { ids: ids.join(',') },
-      }),
+      this.http.get<Personalization[]>(`${this.base}/api/personalizations`),
     );
   }
 

@@ -69,6 +69,14 @@ export class PersonalizationsService {
     return this.toDto(row);
   }
 
+  async listAll() {
+    const rows = await this.repo.find({
+      order: { createdAt: 'DESC' },
+      take: 100,
+    });
+    return rows.map((r) => this.toDto(r));
+  }
+
   async listByIds(ids: string[]) {
     if (!ids.length) return [];
     const rows = await this.repo.find({

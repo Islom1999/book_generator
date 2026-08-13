@@ -3,7 +3,6 @@ import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { I18nService } from '../core/i18n.service';
 import { Personalization } from '../core/models';
-import { ResultsService } from '../core/results.service';
 
 @Component({
   selector: 'app-results-list',
@@ -52,13 +51,12 @@ import { ResultsService } from '../core/results.service';
 export class ResultsListComponent implements OnInit {
   i18n = inject(I18nService);
   private api = inject(ApiService);
-  private results = inject(ResultsService);
   items = signal<Personalization[]>([]);
   loading = signal(true);
 
   async ngOnInit() {
     try {
-      this.items.set(await this.api.personalizations(this.results.ids()));
+      this.items.set(await this.api.personalizations());
     } finally {
       this.loading.set(false);
     }

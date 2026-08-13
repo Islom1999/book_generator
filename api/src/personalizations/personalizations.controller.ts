@@ -51,12 +51,12 @@ export class PersonalizationsController {
 
   @Get()
   list(@Query('ids') ids?: string) {
-    return this.service.listByIds(
-      (ids || '')
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean),
-    );
+    const parsed = (ids || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!parsed.length) return this.service.listAll();
+    return this.service.listByIds(parsed);
   }
 
   @Post(':id/generate')
