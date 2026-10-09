@@ -1,16 +1,27 @@
+# Local infrastructure for development. Apps run with npm (see README.md).
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: ertaklar-postgres
+    container_name: ertaklar-app-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ertaklar
       POSTGRES_PASSWORD: ertaklar
-      POSTGRES_DB: ertaklar
+      POSTGRES_DB: ertaklar_app
     ports:
-      - "55432:5432"
+      - "55433:5432"
     volumes:
-      - ertaklar_pg:/var/lib/postgresql/data
+      - ertaklar_app_pg:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: ertaklar-app-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ertaklar_app_redis:/data
 
 volumes:
-  ertaklar_pg:
+  ertaklar_app_pg:
+  ertaklar_app_redis:
