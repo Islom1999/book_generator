@@ -1,0 +1,153 @@
+{
+  "nav": {
+    "dashboard": "Boshqaruv paneli",
+    "users": "Foydalanuvchilar",
+    "customers": "Mijozlar",
+    "admins": "Adminlar",
+    "reference": "Spravochniklar",
+    "regions": "Viloyatlar",
+    "districts": "Tumanlar",
+    "postOffices": "Pochta bo‘limlari",
+    "languages": "Tillar",
+    "settings": "Sozlamalar"
+  },
+  "form": {
+    "validation": {
+      "required": "Majburiy maydon"
+    }
+  },
+  "active": {
+    "data": "Faol"
+  },
+  "archive": {
+    "data": "Arxiv"
+  },
+  "admin": {
+    "dashboard": {
+      "comingSoon": "Buyurtmalar, tushum va AI xarajatlari vidjetlari 1-bosqichda qo‘shiladi."
+    },
+    "common": {
+      "cancel": "Bekor qilish",
+      "create": "Yaratish",
+      "update": "Saqlash",
+      "delete": "O‘chirish",
+      "filters": "Filtrlar",
+      "name": "Nomi",
+      "isActive": "Faol",
+      "sortOrder": "Tartib",
+      "createdAt": "Yaratilgan",
+      "deleteTitle": "O‘chirishni tasdiqlang",
+      "deleteMessage": "“{{name}}” arxivga o‘tkazilsinmi? Keyin tiklash mumkin."
+    },
+    "grid": {
+      "noData": "Ma’lumot topilmadi",
+      "total": "Jami",
+      "filter": {
+        "yes": "Ha",
+        "no": "Yo‘q"
+      },
+      "actions": {
+        "clearFilter": "Filtrni tozalash",
+        "resetFilters": "Filtrlarni tozalash",
+        "exportCsv": "CSV yuklab olish",
+        "exportExcel": "Excel yuklab olish"
+      }
+    },
+    "roles": {
+      "super_admin": "Super admin",
+      "moderator": "Moderator",
+      "operator": "Operator",
+      "logistics": "Logistika",
+      "finance": "Moliya"
+    },
+    "language": {
+      "title": "Tillar",
+      "addNew": "Til qo‘shish",
+      "edit": "Tilni tahrirlash",
+      "create": "Yangi til",
+      "fields": {
+        "code": "Kod (uz, ru, en)",
+        "name": "Nomi (inglizcha)",
+        "native_name": "O‘z tilidagi nomi",
+        "is_default": "Asosiy til"
+      }
+    },
+    "region": {
+      "title": "Viloyatlar",
+      "addNew": "Viloyat qo‘shish",
+      "edit": "Viloyatni tahrirlash",
+      "create": "Yangi viloyat",
+      "fields": {
+        "name": "Nomi",
+        "code": "Kod"
+      }
+    },
+    "district": {
+      "title": "Tumanlar",
+      "addNew": "Tuman qo‘shish",
+      "edit": "Tumanni tahrirlash",
+      "create": "Yangi tuman",
+      "fields": {
+        "name": "Nomi",
+        "region": "Viloyat",
+        "region_id": "Viloyat",
+        "region_name": "Viloyat"
+      }
+    },
+    "postOffice": {
+      "title": "Pochta bo‘limlari",
+      "addNew": "Bo‘lim qo‘shish",
+      "edit": "Bo‘limni tahrirlash",
+      "create": "Yangi bo‘lim",
+      "fields": {
+        "postal_code": "Pochta indeksi",
+        "name": "Nomi",
+        "address": "Manzil",
+        "district": "Tuman",
+        "district_id": "Tuman",
+        "district_name": "Tuman",
+        "latitude": "Kenglik",
+        "longitude": "Uzunlik"
+      }
+    },
+    "setting": {
+      "title": "Sozlamalar",
+      "addNew": "Sozlama qo‘shish",
+      "edit": "Sozlamani tahrirlash",
+      "create": "Yangi sozlama",
+      "fields": {
+        "key": "Kalit",
+        "value": "Qiymat (JSON)",
+        "description": "Izoh"
+      },
+      "invalidJson": "JSON noto‘g‘ri"
+    },
+    "adminUser": {
+      "title": "Adminlar",
+      "addNew": "Admin qo‘shish",
+      "edit": "Adminni tahrirlash",
+      "create": "Yangi admin",
+      "fields": {
+        "full_name": "F.I.Sh.",
+        "email": "Email",
+        "role": "Rol",
+        "password": "Parol",
+        "newPassword": "Yangi parol (o‘zgartirish uchun)",
+        "last_login_at": "Oxirgi kirish"
+      }
+    },
+    "customer": {
+      "title": "Mijozlar",
+      "addNew": "",
+      "edit": "Mijozni tahrirlash",
+      "create": "",
+      "fields": {
+        "full_name": "F.I.Sh.",
+        "phone": "Telefon",
+        "email": "Email",
+        "is_blocked": "Bloklangan",
+        "last_login_at": "Oxirgi kirish"
+      }
+    }
+  }
+}

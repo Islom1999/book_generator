@@ -1,0 +1,153 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "customers": "Customers",
+    "admins": "Admins",
+    "reference": "Reference data",
+    "regions": "Regions",
+    "districts": "Districts",
+    "postOffices": "Post offices",
+    "languages": "Languages",
+    "settings": "Settings"
+  },
+  "form": {
+    "validation": {
+      "required": "This field is required"
+    }
+  },
+  "active": {
+    "data": "Active"
+  },
+  "archive": {
+    "data": "Archive"
+  },
+  "admin": {
+    "dashboard": {
+      "comingSoon": "Order, revenue and AI cost widgets arrive in phase 1."
+    },
+    "common": {
+      "cancel": "Cancel",
+      "create": "Create",
+      "update": "Save",
+      "delete": "Delete",
+      "filters": "Filters",
+      "name": "Name",
+      "isActive": "Active",
+      "sortOrder": "Sort order",
+      "createdAt": "Created",
+      "deleteTitle": "Confirm deletion",
+      "deleteMessage": "Move “{{name}}” to the archive? It can be restored later."
+    },
+    "grid": {
+      "noData": "No data",
+      "total": "Total",
+      "filter": {
+        "yes": "Yes",
+        "no": "No"
+      },
+      "actions": {
+        "clearFilter": "Clear filter",
+        "resetFilters": "Reset filters",
+        "exportCsv": "Export CSV",
+        "exportExcel": "Export Excel"
+      }
+    },
+    "roles": {
+      "super_admin": "Super admin",
+      "moderator": "Moderator",
+      "operator": "Operator",
+      "logistics": "Logistics",
+      "finance": "Finance"
+    },
+    "language": {
+      "title": "Languages",
+      "addNew": "Add language",
+      "edit": "Edit language",
+      "create": "New language",
+      "fields": {
+        "code": "Code (uz, ru, en)",
+        "name": "Name (English)",
+        "native_name": "Native name",
+        "is_default": "Default language"
+      }
+    },
+    "region": {
+      "title": "Regions",
+      "addNew": "Add region",
+      "edit": "Edit region",
+      "create": "New region",
+      "fields": {
+        "name": "Name",
+        "code": "Code"
+      }
+    },
+    "district": {
+      "title": "Districts",
+      "addNew": "Add district",
+      "edit": "Edit district",
+      "create": "New district",
+      "fields": {
+        "name": "Name",
+        "region": "Region",
+        "region_id": "Region",
+        "region_name": "Region"
+      }
+    },
+    "postOffice": {
+      "title": "Post offices",
+      "addNew": "Add post office",
+      "edit": "Edit post office",
+      "create": "New post office",
+      "fields": {
+        "postal_code": "Postal code",
+        "name": "Name",
+        "address": "Address",
+        "district": "District",
+        "district_id": "District",
+        "district_name": "District",
+        "latitude": "Latitude",
+        "longitude": "Longitude"
+      }
+    },
+    "setting": {
+      "title": "Settings",
+      "addNew": "Add setting",
+      "edit": "Edit setting",
+      "create": "New setting",
+      "fields": {
+        "key": "Key",
+        "value": "Value (JSON)",
+        "description": "Description"
+      },
+      "invalidJson": "Invalid JSON"
+    },
+    "adminUser": {
+      "title": "Admins",
+      "addNew": "Add admin",
+      "edit": "Edit admin",
+      "create": "New admin",
+      "fields": {
+        "full_name": "Full name",
+        "email": "Email",
+        "role": "Role",
+        "password": "Password",
+        "newPassword": "New password (to change)",
+        "last_login_at": "Last login"
+      }
+    },
+    "customer": {
+      "title": "Customers",
+      "addNew": "",
+      "edit": "Edit customer",
+      "create": "",
+      "fields": {
+        "full_name": "Full name",
+        "phone": "Phone",
+        "email": "Email",
+        "is_blocked": "Blocked",
+        "last_login_at": "Last login"
+      }
+    }
+  }
+}

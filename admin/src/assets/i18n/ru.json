@@ -1,0 +1,153 @@
+{
+  "nav": {
+    "dashboard": "Панель управления",
+    "users": "Пользователи",
+    "customers": "Клиенты",
+    "admins": "Администраторы",
+    "reference": "Справочники",
+    "regions": "Регионы",
+    "districts": "Районы",
+    "postOffices": "Почтовые отделения",
+    "languages": "Языки",
+    "settings": "Настройки"
+  },
+  "form": {
+    "validation": {
+      "required": "Обязательное поле"
+    }
+  },
+  "active": {
+    "data": "Активные"
+  },
+  "archive": {
+    "data": "Архив"
+  },
+  "admin": {
+    "dashboard": {
+      "comingSoon": "Виджеты заказов, выручки и расходов на AI появятся на этапе 1."
+    },
+    "common": {
+      "cancel": "Отмена",
+      "create": "Создать",
+      "update": "Сохранить",
+      "delete": "Удалить",
+      "filters": "Фильтры",
+      "name": "Название",
+      "isActive": "Активен",
+      "sortOrder": "Порядок",
+      "createdAt": "Создан",
+      "deleteTitle": "Подтвердите удаление",
+      "deleteMessage": "Переместить «{{name}}» в архив? Его можно будет восстановить."
+    },
+    "grid": {
+      "noData": "Нет данных",
+      "total": "Всего",
+      "filter": {
+        "yes": "Да",
+        "no": "Нет"
+      },
+      "actions": {
+        "clearFilter": "Сбросить фильтр",
+        "resetFilters": "Сбросить фильтры",
+        "exportCsv": "Экспорт CSV",
+        "exportExcel": "Экспорт Excel"
+      }
+    },
+    "roles": {
+      "super_admin": "Супер админ",
+      "moderator": "Модератор",
+      "operator": "Оператор",
+      "logistics": "Логистика",
+      "finance": "Финансы"
+    },
+    "language": {
+      "title": "Языки",
+      "addNew": "Добавить язык",
+      "edit": "Редактировать язык",
+      "create": "Новый язык",
+      "fields": {
+        "code": "Код (uz, ru, en)",
+        "name": "Название (англ.)",
+        "native_name": "Самоназвание",
+        "is_default": "Основной язык"
+      }
+    },
+    "region": {
+      "title": "Регионы",
+      "addNew": "Добавить регион",
+      "edit": "Редактировать регион",
+      "create": "Новый регион",
+      "fields": {
+        "name": "Название",
+        "code": "Код"
+      }
+    },
+    "district": {
+      "title": "Районы",
+      "addNew": "Добавить район",
+      "edit": "Редактировать район",
+      "create": "Новый район",
+      "fields": {
+        "name": "Название",
+        "region": "Регион",
+        "region_id": "Регион",
+        "region_name": "Регион"
+      }
+    },
+    "postOffice": {
+      "title": "Почтовые отделения",
+      "addNew": "Добавить отделение",
+      "edit": "Редактировать отделение",
+      "create": "Новое отделение",
+      "fields": {
+        "postal_code": "Почтовый индекс",
+        "name": "Название",
+        "address": "Адрес",
+        "district": "Район",
+        "district_id": "Район",
+        "district_name": "Район",
+        "latitude": "Широта",
+        "longitude": "Долгота"
+      }
+    },
+    "setting": {
+      "title": "Настройки",
+      "addNew": "Добавить настройку",
+      "edit": "Редактировать настройку",
+      "create": "Новая настройка",
+      "fields": {
+        "key": "Ключ",
+        "value": "Значение (JSON)",
+        "description": "Описание"
+      },
+      "invalidJson": "Некорректный JSON"
+    },
+    "adminUser": {
+      "title": "Администраторы",
+      "addNew": "Добавить администратора",
+      "edit": "Редактировать администратора",
+      "create": "Новый администратор",
+      "fields": {
+        "full_name": "Ф.И.О.",
+        "email": "Email",
+        "role": "Роль",
+        "password": "Пароль",
+        "newPassword": "Новый пароль (для смены)",
+        "last_login_at": "Последний вход"
+      }
+    },
+    "customer": {
+      "title": "Клиенты",
+      "addNew": "",
+      "edit": "Редактировать клиента",
+      "create": "",
+      "fields": {
+        "full_name": "Ф.И.О.",
+        "phone": "Телефон",
+        "email": "Email",
+        "is_blocked": "Заблокирован",
+        "last_login_at": "Последний вход"
+      }
+    }
+  }
+}
