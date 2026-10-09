@@ -90,13 +90,15 @@ Fuse sahifa qayta yuklanganda `sign-in-with-token` orqali tokenni yangilaydi
 va admin hali faolligini tekshiradi. Birinchi super admin `.env` dagi
 `ADMIN_EMAIL` / `ADMIN_PASSWORD` dan, `admin_users` bo'sh bo'lsa yaratiladi.
 
-| Rol | Ruxsati |
-| --- | --- |
-| `super_admin` | hamma narsa (har qanday rol tekshiruvidan o'tadi) |
-| `moderator` | kitob moderatsiyasi (1-bosqich) |
-| `operator` | buyurtmalar, mijozlar, manzil spravochniklari |
-| `logistics` | bosma va yetkazish, manzil spravochniklari |
-| `finance` | to'lovlar, balanslar, mijozlar |
+Admin huquqlari **ruxsatlarga asoslangan** va dinamik (BUSINESS_LOGIC.md, 9-bo'lim):
+`admin_roles` jadvalidagi rollar ruxsat kalitlari ro'yxatini saqlaydi, endpoint
+esa ruxsat kalitini tekshiradi (`@AdminAuth('orders.cancel')`). Ruxsatlar har
+so'rovda bazadan (kesh bilan) o'qiladi, shuning uchun o'zgarish darhol kuchga kiradi.
+
+Hozirgi kod (0-bosqich) hali qat'iy `AdminRole` enum bilan ishlaydi
+(`super_admin`, `moderator`, `operator`, `logistics`, `finance`). 1-bosqichda
+`admin_roles` + ruxsatlar katalogiga ko'chiriladi; mavjud rollar seed sifatida
+saqlanadi.
 
 **Mijozlar.** `POST /api/auth/telegram` (Login Widget, HMAC tekshiruvi) va
 `POST /api/auth/google` (ID token tekshiruvi). Birinchi kirishda `users` va

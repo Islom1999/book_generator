@@ -4,6 +4,7 @@ Bola bosh qahramon bo'lgan shaxsiylashtirilgan ertak kitoblari: AI yordamida
 yaratiladi va bosma shaklda yetkaziladi.
 
 - Biznes-logika: [docs/BUSINESS_LOGIC.md](docs/BUSINESS_LOGIC.md)
+- UI/UX qoidalari: [docs/UI_UX.md](docs/UI_UX.md)
 - Arxitektura va qarorlar: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - Bosqichlar va vazifalar: [docs/ROADMAP.md](docs/ROADMAP.md)
 

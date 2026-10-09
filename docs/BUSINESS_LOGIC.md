@@ -55,7 +55,7 @@ chiqariladi va mijoz tanlagan pochta bo'limiga yetkaziladi.
   (Telegram raqamni o'zi tasdiqlaydi, SMS kerak emas).
 - Bitta telefon faqat bitta akkauntga bog'lanadi (`users.phone` unique).
   Raqam boshqa akkauntda bo'lsa, mijozga "bu raqam boshqa akkauntga bog'langan"
-  deyiladi. Birlashtirishni faqat operator qiladi.
+  deyiladi. Birlashtirishni faqat `customers.edit` ruxsati bor admin qiladi.
 - Faqat `+998` raqamlar qabul qilinadi (boshlanishiga).
 
 ### 3.3. Profil va manzil
@@ -165,9 +165,9 @@ Maqsad: mijoz bolasini kitobda ko'rib, xarid qilishga ishonch hosil qilsin.
 | `ORDER_CHARGE` | − | Buyurtma to'lanishi |
 | `REFUND` | + | Buyurtma bekor bo'lishi yoki qaytarish |
 | `BONUS` | + | Promokod, referal, kompensatsiya |
-| `ADJUSTMENT` | ± | Faqat `finance`, sababi majburiy |
+| `ADJUSTMENT` | ± | Faqat `wallet.adjust` ruxsati bor admin, sababi majburiy |
 
-### 6.3. Bonus pul (taklif)
+### 6.3. Bonus pul
 
 Bonus balansdan buyurtma uchun foydalanish mumkin, lekin uni naqd qaytarib
 bo'lmaydi. Shuning uchun ikki "cho'ntak": `main` va `bonus`. Buyurtmada
@@ -177,7 +177,7 @@ cho'ntakdan kelgan bo'lsa, o'shanga qaytadi.
 ### 6.4. To'ldirish
 
 - To'lov tizimi ulanmaguncha (yuridik shaxs ochilmaguncha) balansni faqat
-  `finance` roli qo'lda to'ldiradi (`ADJUSTMENT`, sabab: "naqd/karta o'tkazma",
+  `wallet.adjust` ruxsati bor admin qo'lda to'ldiradi (`ADJUSTMENT`, sabab: "naqd/karta o'tkazma",
   chek raqami). Shu bilan to'liq oqimni ishga tushirib sinash mumkin.
 - Payme/Click ulanganda: mijoz summani kiritadi → to'lov sahifasi →
   callback → `payments` holati → muvaffaqiyatda `TOPUP`.
@@ -188,8 +188,8 @@ cho'ntakdan kelgan bo'lsa, o'shanga qaytadi.
 
 ### 6.5. Pulni naqd qaytarish
 
-Mijoz balansdagi `main` pulni qaytarishni so'rashi mumkin (ariza). `finance`
-qo'lda ko'rib chiqadi. Bu ommaviy ofertada yoziladi. Avtomatik naqd
+Mijoz balansdagi `main` pulni qaytarishni so'rashi mumkin (ariza).
+`wallet.withdraw` ruxsati bor admin qo'lda ko'rib chiqadi. Bu ommaviy ofertada yoziladi. Avtomatik naqd
 qaytarish yo'q.
 
 ## 7. Buyurtma
@@ -218,23 +218,23 @@ PAID → GENERATING → MODERATION ⇄ REWORK → [CUSTOMER_REVIEW] → APPROVED
 yon tarmoqlar: ON_HOLD, CANCELLED, REFUNDED, RETURNED
 ```
 
-| Holat | Ma'nosi | Kim o'tkazadi |
+| Holat | Ma'nosi | Kim o'tkazadi (ruxsat) |
 | --- | --- | --- |
 | `PAID` | Pul yechildi | Tizim |
 | `GENERATING` | AI barcha sahifalarni yaratyapti | Worker |
-| `MODERATION` | Moderator tekshiryapti | Worker → moderator |
-| `REWORK` | Ba'zi sahifalar qayta generatsiyada | Moderator |
-| `CUSTOMER_REVIEW` | Mijoz preview'ni tasdiqlaydi (taklif, ⚙ `order.customer_review_enabled`) | Moderator |
-| `APPROVED` | Bosmaga tayyor, print-PDF yaratiladi | Moderator yoki mijoz |
-| `PRINT_QUEUE` | Bosma partiyasiga kiritildi | `logistics` |
-| `PRINTING` | Hamkor bosyapti | `logistics` |
-| `PRINTED` | Bosildi, sifat tekshirildi | `logistics` |
-| `SHIPPED` | Jo'natildi, trek raqam bor | `logistics` |
-| `DELIVERED` | Yetkazildi | `logistics` yoki BTS integratsiyasi |
-| `ON_HOLD` | Mijozdan javob kutilmoqda (masalan, yangi surat) | Moderator, operator |
-| `CANCELLED` | Bekor qilindi | Mijoz yoki operator |
+| `MODERATION` | Moderator tekshiryapti | Worker |
+| `REWORK` | Ba'zi sahifalar qayta generatsiyada | `moderation.regenerate` |
+| `CUSTOMER_REVIEW` | Mijoz preview'ni tasdiqlaydi (⚙ `order.customer_review_enabled`) | `moderation.review` |
+| `APPROVED` | Bosmaga tayyor, print-PDF yaratiladi | `moderation.review`, mijoz yoki taymer |
+| `PRINT_QUEUE` | Bosma partiyasiga kiritildi | `print.manage` |
+| `PRINTING` | Hamkor bosyapti | `print.manage` |
+| `PRINTED` | Bosildi, sifat tekshirildi | `print.manage` |
+| `SHIPPED` | Jo'natildi, trek raqam bor | `shipping.manage` |
+| `DELIVERED` | Yetkazildi | `shipping.manage` yoki BTS integratsiyasi |
+| `ON_HOLD` | Mijozdan javob kutilmoqda (masalan, yangi surat) | `orders.hold` |
+| `CANCELLED` | Bekor qilindi | Mijoz yoki `orders.cancel` |
 | `REFUNDED` | Pul balansga qaytarildi | Tizim (bekor qilishdan keyin) |
-| `RETURNED` | Pochtadan olinmay qaytdi | `logistics` |
+| `RETURNED` | Pochtadan olinmay qaytdi | `shipping.manage` |
 
 Qoidalar:
 
@@ -242,19 +242,19 @@ Qoidalar:
   joyda jadval sifatida). Har bir o'zgarish `order_status_history` ga
   yoziladi: kim, qachon, qaysi holatdan, izoh.
 - Har bir o'zgarishda mijozga bildirishnoma ketadi (bot va/yoki email).
-- `CUSTOMER_REVIEW`: mijoz ⚙ `order.customer_review_hours` (taklif: 48) soat
+- `CUSTOMER_REVIEW`: mijoz ⚙ `order.customer_review_hours` (48) soat
   ichida javob bermasa, avtomatik `APPROVED`. Mijoz o'zgartirish so'rasa →
-  `MODERATION` (⚙ `order.max_customer_revisions`, taklif: 1).
+  `MODERATION` (⚙ `order.max_customer_revisions`, 1).
 
 ### 7.3. Bekor qilish va qaytarish
 
 | Qachon | Kim | Natija |
 | --- | --- | --- |
 | `APPROVED` dan oldin | Mijoz o'zi | To'liq summa balansga (`REFUND`) |
-| `APPROVED` dan `PRINTING` gacha | Faqat operator | Operator qaroriga ko'ra to'liq yoki qisman |
+| `APPROVED` dan `PRINTING` gacha | `orders.cancel` | Admin qaroriga ko'ra to'liq yoki qisman |
 | `PRINTING` dan keyin | Bekor qilinmaydi | — |
-| Bosma nuqsoni, shikastlanish | Operator | Bepul qayta bosma yoki qaytarish |
-| `RETURNED` (olinmagan) | Operator | Qayta jo'natish (yetkazish pulini mijoz to'laydi) yoki yetkazishsiz qaytarish |
+| Bosma nuqsoni, shikastlanish | `orders.cancel` | Bepul qayta bosma yoki qaytarish |
+| `RETURNED` (olinmagan) | `shipping.manage` | Qayta jo'natish (yetkazish pulini mijoz to'laydi) yoki yetkazishsiz qaytarish |
 
 Pul har doim **balansga** qaytadi (6.5 ga qarang).
 
@@ -294,16 +294,47 @@ Amallar:
 Har bir sahifaning barcha versiyalari saqlanadi. Qaysi versiya bosmaga
 ketgani belgilanadi.
 
-## 9. Admin rollari
+## 9. Admin ruxsatlari (permission-based)
 
-| Rol | Nima qiladi |
+Ruxsatlar **dinamik**: rollarni `super_admin` admin panelda yaratadi va
+ularga ruxsatlarni belgilaydi. Kodda faqat ruxsatlar katalogi qat'iy
+(endpoint ruxsat kalitini tekshiradi, rol nomini emas).
+
+- `admin_roles`: nomi (tarjima), tavsif, ruxsatlar ro'yxati, faolligi.
+- Adminga bitta rol biriktiriladi (taklif: keyinchalik bir nechta).
+- `is_super_admin` belgili admin har qanday tekshiruvdan o'tadi. Kamida bitta
+  faol super admin doim qoladi (oxirgisini o'chirib yoki bloklab bo'lmaydi).
+- Admin o'ziga ruxsat qo'sha olmaydi (o'z rolini tahrirlay olmaydi).
+- Rol yoki ruxsat o'zgarishi darhol kuchga kiradi (har so'rovda tekshiriladi,
+  tokenga yozilmaydi) va audit'ga tushadi.
+- Admin panel menyusi va tugmalari ruxsatlarga qarab ko'rsatiladi.
+
+Ruxsatlar katalogi (yangi funksiya qo'shilganda kengayadi):
+
+| Guruh | Ruxsatlar |
 | --- | --- |
-| `super_admin` | Hamma narsa: adminlar, tillar, sozlamalar |
-| `moderator` | Moderatsiya ekrani, sahifalarni qayta generatsiya va tahrirlash |
-| `operator` | Mijozlar, buyurtmalar, bekor qilish, `ON_HOLD`, manzil spravochniklari |
-| `logistics` | Bosma partiyalari, holatlar `PRINT_QUEUE` → `DELIVERED`, trek raqam, manzillar |
-| `finance` | Balanslar, `ADJUSTMENT`, to'lovlar, hisobotlar, qaytarishlar |
-| `content` (taklif) | Shablonlar, formatlar, katalog |
+| Adminlar | `admins.view`, `admins.manage`, `roles.manage` |
+| Spravochniklar | `languages.manage`, `settings.manage`, `addresses.manage` |
+| Mijozlar | `customers.view`, `customers.edit`, `customers.block`, `customers.grant_trial` |
+| Katalog | `templates.view`, `templates.manage`, `formats.manage` |
+| Buyurtmalar | `orders.view`, `orders.cancel`, `orders.hold` |
+| Moderatsiya | `moderation.review`, `moderation.regenerate`, `moderation.edit_text` |
+| Bosma va yetkazish | `print.manage`, `print.download`, `shipping.manage` |
+| Moliya | `wallet.view`, `wallet.adjust`, `wallet.withdraw`, `payments.view`, `reports.finance` |
+| Boshqa | `dashboard.view`, `audit.view` |
+
+Boshlang'ich rollar (seed, keyin admin panelda o'zgartiriladi):
+
+| Rol | Ruxsatlar |
+| --- | --- |
+| Super admin | hammasi (`is_super_admin`) |
+| Moderator | `moderation.*`, `orders.view`, `customers.view`, `dashboard.view` |
+| Operator | `orders.*`, `customers.*`, `addresses.manage`, `dashboard.view` |
+| Logistika | `print.*`, `shipping.manage`, `orders.view`, `addresses.manage` |
+| Moliya | `wallet.*`, `payments.view`, `reports.finance`, `customers.view`, `orders.cancel` |
+
+Shablonlarni (`templates.manage`, `formats.manage`) hozircha faqat super admin
+boshqaradi; alohida "kontent" rolini keyin admin panelda yaratish mumkin.
 
 Har bir admin amali (`audit_logs`): kim, nima, qaysi yozuv, oldingi va
 yangi qiymat. Pul va holat o'zgarishlari audit'siz bo'lmaydi.
@@ -312,9 +343,9 @@ yangi qiymat. Pul va holat o'zgarishlari audit'siz bo'lmaydi.
 
 - Tasdiqlangan buyurtma uchun worker print-PDF yaratadi: upscale, 300 DPI,
   bleed, CMYK. Aniq parametrlar hamkor tanlangach (⚙ format spravochnigida).
-- `logistics` tasdiqlanganlarni **bosma partiyasiga** (`print_batches`)
+- `print.manage` ruxsati bor admin tasdiqlanganlarni **bosma partiyasiga** (`print_batches`)
   yig'adi va ZIP eksport qiladi (yoki hamkor API'si orqali yuboradi).
-- Print-fayl faqat admin panelda, `logistics` rolida, muddatli havola
+- Print-fayl faqat admin panelda, `print.download` ruxsati bilan, muddatli havola
   bilan yuklanadi. Har bir yuklab olish audit'ga yoziladi.
 - Bosilgandan keyin sifat tekshiruvi (`PRINTED`). Nuqson bo'lsa qayta bosma.
 - Jo'natish: BTS, mijoz tanlagan bo'limga. Trek raqam kiritiladi
@@ -379,9 +410,9 @@ faqat mijoz rozilik bergan bo'lsa.
 | `children.max_per_user` | 5 | taklif |
 | `wallet.min_topup` | — | Payme ulanganda |
 | `delivery.price` | — | hamkor tanlanganda |
-| `order.customer_review_enabled` | true | taklif |
-| `order.customer_review_hours` | 48 | taklif |
-| `order.max_customer_revisions` | 1 | taklif |
+| `order.customer_review_enabled` | true | tasdiqlandi |
+| `order.customer_review_hours` | 48 | tasdiqlandi |
+| `order.max_customer_revisions` | 1 | tasdiqlandi |
 | `moderation.max_regenerations_per_page` | 3 | taklif |
 | `preview.max_px` | 800 | taklif |
 | `referral.bonus_amount` | — | 2-bosqich |
@@ -397,9 +428,11 @@ faqat mijoz rozilik bergan bo'lsa.
 
 ## 17. Ochiq savollar
 
+Hal qilinganlar: mijoz tasdig'i bosqichi bor (7.2), bonus pul alohida (6.3),
+pul faqat balansga qaytadi (6.5, 7.3), admin huquqlari dinamik ruxsatlar
+orqali (9).
+
+
 - Kitob formati, sahifa soni, narx, bosma hamkor.
 - Shablon rasmlari: illustrator yoki AI.
-- `CUSTOMER_REVIEW` bosqichi kerakmi (taklif: ha, nizolarni kamaytiradi).
-- Bonus balans alohida bo'ladimi (taklif: ha).
-- `content` roli kerakmi yoki shablonlarni `super_admin` boshqaradimi.
 - Yetkazish narxi bir xilmi yoki viloyat bo'yicha.

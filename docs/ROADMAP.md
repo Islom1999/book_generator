@@ -14,10 +14,12 @@
 - [x] Worker (BullMQ) va bot (grammY) skeletlari, Redis
 - [x] Biznes-logika hujjati (`docs/BUSINESS_LOGIC.md`)
 - [x] Claude Code sozlamalari: `CLAUDE.md`, `.claude/skills`, `.claude/agents`
+- [x] UI/UX qoidalari va mobil/desktop tekshiruv skripti (`docs/UI_UX.md`)
 
 ## 1-bosqich — asosiy oqim
 
 Backend:
+- [ ] Dinamik admin rollari va ruxsatlar katalogi (`AdminRole` enum o'rniga), admin panelda rollar sahifasi
 - [ ] Fayl storage (MinIO/S3), signed URL, watermark
 - [ ] Kitob shablonlari: `book_templates`, `template_pages`, `book_formats`
 - [ ] Bola profillari, surat yuklash va sifat tekshiruvi
