@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/db",
+    "rootDir": "./src",
+    "incremental": false,
+    "declaration": false,
+    "types": ["node"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["**/*spec.ts"]
+}
