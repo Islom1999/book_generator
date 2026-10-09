@@ -1,5 +1,7 @@
 # Ertaklar.uz — MVP
 
+> **Arxiv.** Bu eski MVP. Yangi tizim `backend/` va `admin/` papkalarida — asosiy [README](../README.md) ga qarang. Quyidagi buyruqlar `legacy/` papkasi ichidan ishga tushiriladi.
+
 Personalized children’s storybooks (WonderWraps-style) for Uzbekistan.
 
 **Stack:** Angular 19 · NestJS · PostgreSQL · TypeORM · OpenRouter

@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ertaklar-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ertaklar
+      POSTGRES_PASSWORD: ertaklar
+      POSTGRES_DB: ertaklar
+    ports:
+      - "55432:5432"
+    volumes:
+      - ertaklar_pg:/var/lib/postgresql/data
+
+volumes:
+  ertaklar_pg:
