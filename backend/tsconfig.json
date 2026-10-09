@@ -19,10 +19,12 @@
     "strictPropertyInitialization": false,
     "types": ["vitest/globals", "node"],
     "paths": {
-      "@app/common": ["./libs/common/src/index.ts"],
-      "@app/common/*": ["./libs/common/src/*"],
       "@app/database": ["./libs/database/src/index.ts"],
-      "@app/database/*": ["./libs/database/src/*"]
+      "@app/database/*": ["./libs/database/src/*"],
+      "@app/entities": ["./libs/entities/src/index.ts"],
+      "@app/entities/*": ["./libs/entities/src/*"],
+      "@app/queues": ["./libs/queues/src/index.ts"],
+      "@app/queues/*": ["./libs/queues/src/*"]
     }
   },
   "include": ["apps/**/*", "libs/**/*"],

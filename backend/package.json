@@ -20,10 +20,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:build": "rm -rf dist/db && tsc -p libs/database/tsconfig.cli.json",
-    "migration:generate": "npm run db:build && node --env-file-if-exists=.env node_modules/typeorm/cli.js -d dist/db/data-source.js migration:generate libs/database/src/migrations/$npm_config_name",
+    "migration:generate": "npm run db:build && node --env-file-if-exists=.env node_modules/typeorm/cli.js -d dist/db/database/src/data-source.js migration:generate libs/database/src/migrations/$npm_config_name",
     "migration:create": "typeorm migration:create libs/database/src/migrations/$npm_config_name",
-    "migration:run": "npm run db:build && node --env-file-if-exists=.env node_modules/typeorm/cli.js -d dist/db/data-source.js migration:run",
-    "migration:revert": "npm run db:build && node --env-file-if-exists=.env node_modules/typeorm/cli.js -d dist/db/data-source.js migration:revert"
+    "migration:run": "npm run db:build && node --env-file-if-exists=.env node_modules/typeorm/cli.js -d dist/db/database/src/data-source.js migration:run",
+    "migration:revert": "npm run db:build && node --env-file-if-exists=.env node_modules/typeorm/cli.js -d dist/db/database/src/data-source.js migration:revert"
   },
   "dependencies": {
     "@nestjs/bullmq": "^12.0.0",

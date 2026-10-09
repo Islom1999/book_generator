@@ -1,7 +1,7 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { Queues, redisConnection } from '@app/common';
+import { Queues, redisConnection } from '@app/queues';
 import { DatabaseModule } from '@app/database';
 import { GenerationProcessor } from './generation.processor.js';
 

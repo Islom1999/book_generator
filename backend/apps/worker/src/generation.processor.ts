@@ -1,6 +1,6 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
-import { Queues } from '@app/common';
+import { Queues } from '@app/queues';
 import type { Job } from 'bullmq';
 
 /**
