@@ -41,7 +41,7 @@
     },
     "grid": {
       "noData": "No data",
-      "total": "Total",
+      "total": "Total: {{count}}",
       "filter": {
         "yes": "Yes",
         "no": "No"

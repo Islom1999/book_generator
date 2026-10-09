@@ -15,6 +15,7 @@ messages and these Claude files are in English. `docs/` are in Uzbek.
   disagree, stop and ask; don't silently pick one.
 - `docs/ARCHITECTURE.md` — decisions and conventions.
 - `docs/ROADMAP.md` — tick items off when done.
+- `docs/UI_UX.md` + `.claude/skills/ui-ux/` — UI rules for every screen.
 
 ## Layout
 
@@ -55,8 +56,13 @@ Use the `verify` skill before saying work is done.
 - Translatable text is `jsonb` `{ uz, ru, en, ... }` (`Translatable`);
   languages are dynamic (`languages` table) — never hard-code the list.
 - Customer-facing APIs never expose full-resolution images or print files.
-- Admin endpoints live under `/api/admin/*` with `@AdminAuth(roles…)`;
-  customer endpoints use `@UserAuth()`.
+- Admin endpoints live under `/api/admin/*` with `@AdminAuth(...)`; customer
+  endpoints use `@UserAuth()`. Admin access is moving to **dynamic
+  permissions** (BUSINESS_LOGIC §9): new endpoints are guarded by a permission
+  key (`orders.cancel`), not a role name. Until that lands, map the permission
+  to the closest current `AdminRole` and leave a `// permission: <key>` comment.
+- Every screen follows the `ui-ux` skill (mobile and desktop, all states) and
+  is checked with its screenshot script before it's called done.
 - Secrets only in `.env` (git-ignored). Don't print or commit them.
 
 ## Shell safety

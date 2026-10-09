@@ -57,7 +57,7 @@ export abstract class BaseTableComponent<T> implements OnInit {
       width: '50vw',
       breakpoints: {
         '960px': '75vw',
-        '640px': '90vw',
+        '640px': '100vw',
       },
       modal: true,
       dismissableMask: false,

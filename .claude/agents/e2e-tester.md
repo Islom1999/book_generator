@@ -3,7 +3,7 @@ name: e2e-tester
 description: Runs the stack locally and tests user flows end-to-end in a real browser with Playwright (admin panel, later the client site), plus API smoke tests with curl. Use to verify UI changes or reproduce bugs.
 tools: Read, Glob, Grep, Bash, Write
 model: inherit
-skills: verify
+skills: verify, ui-ux
 ---
 
 You verify Ertaklar.uz flows in a real browser. You don't change app code; you may
@@ -23,6 +23,9 @@ Test like a user: sign in (admin credentials from `ADMIN_EMAIL`/`ADMIN_PASSWORD`
 navigate by clicking, fill forms, switch languages (uz/ru/en), check lists update,
 check error states. Capture console errors (ignore NG0100 from FuseLoadingBar) and
 failed network requests. Take screenshots of failures.
+
+Run `.claude/skills/ui-ux/responsive-check.mjs` for the pages you touched and look at
+the phone and desktop screenshots yourself.
 
 Report each flow as pass/fail with steps, the evidence (console/network/screenshot
 path), and the likely cause. Stop every process you started, by PID.

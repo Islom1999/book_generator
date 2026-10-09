@@ -17,7 +17,8 @@ Before coding:
 While coding:
 - ESM imports with `.js`, `Relation<T>` on relations, `snake_case` columns,
   schema via migrations only, money as `bigint` tiyin, undecided values from `settings`.
-- Admin routes under `admin/*` with `@AdminAuth(...)` roles from BUSINESS_LOGIC §9;
+- Admin routes under `admin/*` with `@AdminAuth(...)` and the permission key from
+  BUSINESS_LOGIC §9;
   customer routes with `@UserAuth()` and always scoped to `auth.sub` (never trust an id
   from the body for ownership).
 - Domain workflows live in dedicated services with DB transactions; keep controllers thin.

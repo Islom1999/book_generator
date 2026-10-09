@@ -31,7 +31,8 @@ don't introduce a different UI kit or state library.
 - All labels/headers are i18n keys with `translate: true`.
 - Grid templates: `'translate'` for `Translatable`, `'boolean'` for flags,
   dot paths (`region.name`) work for relations.
-- Hide menu items/actions the admin's role can't use; the API enforces RBAC anyway.
+- Hide menu items/actions the admin's permissions don't allow; the API enforces them anyway.
+- Follow the `ui-ux` skill; run its `responsive-check.mjs` on changed pages.
 - `environment.development.ts` points to `http://localhost:3000/api`.
 
 ## Checks

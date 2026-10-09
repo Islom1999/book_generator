@@ -21,7 +21,9 @@ same change.
 - Debit flow, all in one `dataSource.transaction()`:
   lock the wallet row (`SELECT ... FOR UPDATE` / `lock: { mode: 'pessimistic_write' }`),
   compute balance, reject if insufficient, insert the negative row, update the order.
-- `ADJUSTMENT` requires `finance` role and a reason; always audit-logged.
+- `ADJUSTMENT` requires the `wallet.adjust` permission and a reason; always audit-logged.
+- Bonus and main money are separate pockets (§6.3): spend bonus first, refund to the
+  pocket it came from; bonus is never withdrawable.
 
 ## Order status (§7.2)
 

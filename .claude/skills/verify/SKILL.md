@@ -23,7 +23,7 @@ no changes (remove any file it creates).
 If endpoints changed: start the API (`npm run start:api` in the background, wait for
 `/api/health`), sign in as admin (`POST /api/admin/auth/sign-in` with ADMIN_EMAIL /
 ADMIN_PASSWORD from `.env`), and curl the changed routes: happy path, validation error
-(400), wrong role (403), no token (401).
+(400), missing permission (403), no token (401).
 
 ## Admin (`admin/`)
 
@@ -33,6 +33,11 @@ npx ng build
 
 For UI changes: `npm start -- --port 4300` with the API running, then click through
 or delegate to the `e2e-tester` agent (Playwright, Chromium at `/opt/pw-browsers`).
+
+## UI
+
+For any changed screen run `.claude/skills/ui-ux/responsive-check.mjs` and review
+the screenshots (see the `ui-ux` skill).
 
 ## Report
 

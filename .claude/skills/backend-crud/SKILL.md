@@ -31,11 +31,12 @@ Reference implementation: `backend/apps/api/src/reference/` + `backend/libs/data
 5. **Admin controller** —
    ```ts
    @Controller('admin/<plural-kebab>')
-   @AdminAuth(AdminRole.OPERATOR)          // roles per docs/BUSINESS_LOGIC.md §9
+   @AdminAuth(AdminRole.OPERATOR)          // permission: addresses.manage (BUSINESS_LOGIC §9)
    export class XAdminController extends CrudController<X>({ create: CreateXDto, update: UpdateXDto }) {
      constructor(readonly service: XService) { super(); }
    }
    ```
+   Pick the permission key from the §9 catalogue (add a new key there if none fits).
    Read-only or restricted resources: write explicit routes instead (see `users/users.admin.ts`).
 6. **Public endpoint** (only if the client site needs it) — separate controller without
    `/admin`, return only active, non-sensitive fields.
@@ -44,6 +45,6 @@ Reference implementation: `backend/apps/api/src/reference/` + `backend/libs/data
 8. **Verify** — `npm run typecheck && npm run lint && npm test`, start the API and
    smoke-test with curl: sign in (`POST /api/admin/auth/sign-in`), then
    `POST /api/admin/<x>/pagination` with `{"first":0,"rows":10}`, create, update,
-   delete → archive → `GET repair/:id`. Check a wrong role gets 403.
+   delete → archive → `GET repair/:id`. Check an admin without the permission gets 403.
 9. Add the admin page with the `admin-crud-page` skill and update
    `docs/ARCHITECTURE.md` §6 (✅) and `docs/ROADMAP.md`.

@@ -41,7 +41,7 @@
     },
     "grid": {
       "noData": "Ma’lumot topilmadi",
-      "total": "Jami",
+      "total": "Jami: {{count}}",
       "filter": {
         "yes": "Ha",
         "no": "Yo‘q"
