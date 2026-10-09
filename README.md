@@ -3,6 +3,7 @@
 Bola bosh qahramon bo'lgan shaxsiylashtirilgan ertak kitoblari: AI yordamida
 yaratiladi va bosma shaklda yetkaziladi.
 
+- Biznes-logika: [docs/BUSINESS_LOGIC.md](docs/BUSINESS_LOGIC.md)
 - Arxitektura va qarorlar: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - Bosqichlar va vazifalar: [docs/ROADMAP.md](docs/ROADMAP.md)
 
@@ -14,6 +15,7 @@ yaratiladi va bosma shaklda yetkaziladi.
 | `admin/` | Fuse admin panel (Angular 20, PrimeNG) |
 | `legacy/` | Eski MVP, faqat ma'lumot uchun |
 | `docs/` | Hujjatlar |
+| `.claude/` | Claude Code sozlamalari: skill'lar va subagentlar |
 
 ## Lokal ishga tushirish
 

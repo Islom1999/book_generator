@@ -12,6 +12,8 @@
 - [x] Admin panel (Fuse): kirish, menyu, uz/ru/en, CRUD sahifalari: tillar,
       viloyatlar, tumanlar, pochta bo'limlari, sozlamalar, adminlar, mijozlar
 - [x] Worker (BullMQ) va bot (grammY) skeletlari, Redis
+- [x] Biznes-logika hujjati (`docs/BUSINESS_LOGIC.md`)
+- [x] Claude Code sozlamalari: `CLAUDE.md`, `.claude/skills`, `.claude/agents`
 
 ## 1-bosqich — asosiy oqim
 
@@ -56,6 +58,9 @@ Client (yangi `client/` ilova, Angular SSR + Tailwind + PrimeNG):
 - [ ] Sharhlar, analitika
 
 ## Ochiq savollar
+
+To'liq ro'yxat: BUSINESS_LOGIC.md, 17-bo'lim.
+
 
 - Bosma hamkor va kitob formati (o'lcham, sahifa soni, muqova, narx)
 - Shablon rasmlari: illustrator chizadimi yoki AI'da tayyorlanadimi

@@ -4,7 +4,8 @@ Bola bosh qahramon bo'lgan, AI yordamida shaxsiylashtirilgan va bosma
 shaklda yetkaziladigan ertak kitoblari. Xizmat avval faqat O'zbekiston uchun.
 
 Bu hujjat qabul qilingan qarorlar va tizim tuzilishini tasvirlaydi.
-Bosqichlar va vazifalar [ROADMAP.md](./ROADMAP.md) faylida.
+Biznes qoidalari [BUSINESS_LOGIC.md](./BUSINESS_LOGIC.md), bosqichlar va
+vazifalar [ROADMAP.md](./ROADMAP.md) faylida.
 
 ## 1. Qabul qilingan qarorlar
 
@@ -139,15 +140,17 @@ Telegram bot orqali kontakt ulashish bilan tasdiqlanadi (1-bosqich).
 ### Buyurtma holatlari
 
 ```
-PAID → GENERATING → MODERATION ⇄ REWORK → APPROVED → PRINT_QUEUE
-     → PRINTING → PRINTED → SHIPPED → DELIVERED
-yon tarmoqlar: CANCELLED, REFUNDED (balansga), RETURNED
+PAID → GENERATING → MODERATION ⇄ REWORK → [CUSTOMER_REVIEW] → APPROVED
+     → PRINT_QUEUE → PRINTING → PRINTED → SHIPPED → DELIVERED
+yon tarmoqlar: ON_HOLD, CANCELLED, REFUNDED (balansga), RETURNED
 ```
+
+O'tish qoidalari va kim o'tkazishi: BUSINESS_LOGIC.md, 7.2.
 
 ### Balans (ledger)
 
-Balans alohida maydonda saqlanmaydi, `wallet_transactions` yig'indisidan
-hisoblanadi. Har bir yozuv idempotent (`idempotency_key`). Pul qaytarib
+Summalar tiyinda, `bigint`. Balans alohida maydonda saqlanmaydi,
+`wallet_transactions` yig'indisidan hisoblanadi. Har bir yozuv idempotent (`idempotency_key`). Pul qaytarib
 olinmaydigan oldindan to'lov sifatida ofertada ko'rsatiladi.
 
 ## 7. AI pipeline (worker)
