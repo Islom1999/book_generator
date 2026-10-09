@@ -10,7 +10,7 @@ description: Create, review, run or revert TypeORM migrations in backend/libs/da
 
 ## Schema change
 
-1. Edit/add the entity (and register it in `entities/index.ts` → `ENTITIES`).
+1. Edit/add the entity in `libs/entities/src/` (and register it in `libs/entities/src/index.ts` → `ENTITIES`).
 2. Make sure the DB is up and current: `docker compose up -d` (repo root), `npm run migration:run`.
 3. `npm run migration:generate --name=AddBookTemplates` (PascalCase, describes the change).
 4. **Read the generated SQL.** Check: no unexpected `DROP`, column renames are not

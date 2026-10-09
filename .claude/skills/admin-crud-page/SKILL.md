@@ -5,8 +5,11 @@ description: Add a list + form page to the Fuse admin panel for a backend CRUD r
 
 # Admin CRUD page (Fuse)
 
-Reference: `admin/src/app/modules/admin/reference/region/` (simple) and
-`reference/district/` (select options from another resource).
+Rules come from `docs/ARCHITECTURE_TEMPLATE.md` §4: one service + one table
+(list) + one form component per resource, all extending the shared base classes
+(`BaseCrudService`, `BaseTableComponent`, `BaseFormComponent`). Reference:
+`admin/src/app/modules/admin/reference/region/` (simple) and `reference/district/`
+(select options from another resource).
 
 ## Steps
 
@@ -24,11 +27,14 @@ Reference: `admin/src/app/modules/admin/reference/region/` (simple) and
 5. **Form** `pages/<name>-form`: Formly `fields`.
    - Translatable: `translatableFields('name', 'admin.common.name', this.languages.languages(), this.transloco)`
      (inject `ContentLanguagesService`). Never hard-code languages.
-   - Selects from another resource: an `XOptionsService` that loads `getAll()` and maps
-     to `{ label: pickTranslation(name, lang), value: id }` (see district).
+   - Selects from another resource: use the other feature's service —
+     `inject(RegionService).selectOptions((r) => pickTranslation(r.name, this.transloco.getActiveLang()))`
+     (or `selectOptionsFromPagination` for big tables). Don't write option services.
+   - Before writing a new input type, check `src/app/shared/ngx-formly/` (input-mask,
+     datepicker, autocomplete, multiselect, upload, …).
    - `mapToModel()` returns only fields the API DTO accepts (extra fields → 400).
    - `getDeleteMessage()` returns the record's display name.
-6. **Route** in `src/app/app.routes.ts`:
+6. **Route** in `src/app/modules/admin/index.ts` (`adminRoutes`):
    `{ path: '<kebab>', loadChildren: () => import('app/modules/admin/<group>/<name>/<name>.routes') }`.
 7. **Navigation** in `src/app/core/navigation/navigation.ts`: `title: 'nav.<key>'`,
    heroicons icon, link matching the route.

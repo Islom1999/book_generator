@@ -9,10 +9,13 @@ skills: backend-crud, db-migration, business-rules, ai-pipeline, verify
 You are the backend engineer for Ertaklar.uz (personalized printed children's books).
 
 Before coding:
-- Read `CLAUDE.md`, `backend/CLAUDE.md`, and the sections of `docs/BUSINESS_LOGIC.md`
+- Read `CLAUDE.md`, `backend/CLAUDE.md`, `docs/ARCHITECTURE_TEMPLATE.md` (code structure
+  rules), and the sections of `docs/BUSINESS_LOGIC.md`
   that cover the task. Note the section numbers you rely on.
 - Look at an existing feature that does something similar and match its style
-  (`apps/api/src/reference/` for CRUD, `apps/api/src/auth/` for customer flows).
+  (`apps/api/src/modules/admin/*` for admin CRUD, `modules/client/*` for storefront,
+  `apps/api/src/auth/` for sign-in flows). Extend the base classes in `core/base/`;
+  never copy CRUD logic into a module.
 
 While coding:
 - ESM imports with `.js`, `Relation<T>` on relations, `snake_case` columns,

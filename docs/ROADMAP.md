@@ -3,7 +3,7 @@
 ## 0-bosqich — poydevor ✅
 
 - [x] Eski MVP `legacy/` ga ko'chirildi (deploy workflow yo'li yangilandi)
-- [x] NestJS 12 monorepo: `api`, `worker`, `bot`, `libs/common`, `libs/database`
+- [x] NestJS 12 monorepo: `api`, `worker`, `bot`, `libs/entities`, `libs/database`, `libs/queues`
 - [x] PostgreSQL migratsiyalari (`synchronize` o'chirilgan), boshlang'ich ma'lumotlar: tillar, 14 viloyat, sozlamalar
 - [x] Fuse admin bilan mos generic CRUD (pagination, filtr, arxiv, tiklash)
 - [x] Admin auth + rollar (RBAC), birinchi super admin avtomatik yaratiladi
@@ -14,6 +14,7 @@
 - [x] Worker (BullMQ) va bot (grammY) skeletlari, Redis
 - [x] Biznes-logika hujjati (`docs/BUSINESS_LOGIC.md`)
 - [x] Claude Code sozlamalari: `CLAUDE.md`, `.claude/skills`, `.claude/agents`
+- [x] Kod tuzilishi egasining shabloniga moslandi (`docs/ARCHITECTURE_TEMPLATE.md`): `core/base`, `modules/admin|client/<entity>`, `BaseClientService`
 - [x] UI/UX qoidalari va mobil/desktop tekshiruv skripti (`docs/UI_UX.md`)
 
 ## 1-bosqich — asosiy oqim

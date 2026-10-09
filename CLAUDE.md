@@ -14,6 +14,9 @@ messages and these Claude files are in English. `docs/` are in Uzbek.
   alters a rule, update this doc **in the same change**. If code and doc
   disagree, stop and ask; don't silently pick one.
 - `docs/ARCHITECTURE.md` — decisions and conventions.
+- `docs/ARCHITECTURE_TEMPLATE.md` — the owner's code-structure template
+  (base classes, module layout, shared-lib rule). **Follow it**; the deliberate
+  deviations are listed in ARCHITECTURE.md §2.
 - `docs/ROADMAP.md` — tick items off when done.
 - `docs/UI_UX.md` + `.claude/skills/ui-ux/` — UI rules for every screen.
 
@@ -21,7 +24,7 @@ messages and these Claude files are in English. `docs/` are in Uzbek.
 
 | Path | What |
 | --- | --- |
-| `backend/` | NestJS 12 monorepo (ESM): `apps/api`, `apps/worker`, `apps/bot`, `libs/common`, `libs/database`. See `backend/CLAUDE.md` |
+| `backend/` | NestJS 12 monorepo (ESM): `apps/api`, `apps/worker`, `apps/bot`, `libs/entities`, `libs/database`, `libs/queues`. See `backend/CLAUDE.md` |
 | `admin/` | Fuse admin panel, Angular 20 + PrimeNG + Formly + Transloco. See `admin/CLAUDE.md` |
 | `client/` | Customer site (not created yet): Angular SSR + Tailwind + PrimeNG |
 | `legacy/` | Old MVP. **Read-only reference** (AI pipeline lives in `legacy/api/src/openrouter`, `replicate`, `personalizations`). Never edit or import from it |

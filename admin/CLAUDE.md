@@ -1,11 +1,13 @@
 # Admin panel (Fuse, Angular 20)
 
-Built from the owner's `fuse-schematics` starter. Stay inside its patterns;
-don't introduce a different UI kit or state library.
+Built from the owner's `fuse-schematics` starter and the owner's template
+(`docs/ARCHITECTURE_TEMPLATE.md` §4). Stay inside its patterns; don't introduce
+a different UI kit or state library.
 
 ## Key places
 
-- `src/app/app.routes.ts` — lazy routes (`users/*`, `reference/*`, …).
+- `src/app/app.routes.ts` — auth/layout shell; admin pages live in
+  `src/app/modules/admin/index.ts` (`adminRoutes`).
 - `src/app/core/navigation/navigation.ts` — `adminNavigation`; titles are
   Transloco keys (`nav.*`), translated by `NavigationService`.
 - `src/app/core/auth/` — sign-in against `admin/auth/sign-in`; user has `role`.
@@ -13,8 +15,12 @@ don't introduce a different UI kit or state library.
   languages from the API (signal), loaded in `app.resolvers.ts`.
 - `src/app/shared/translatable/translatable.ts` — `Translatable`,
   `pickTranslation`, `translatable` pipe, `translatableFields()` for Formly.
-- `src/app/shared/services/base-crud.service.ts`,
+- `src/app/core/services/base.service.ts` — `BaseApiService`; nothing calls
+  `HttpClient` directly.
+- `src/app/shared/services/base-crud.service.ts` — `BaseCrudService<T>`
+  (CRUD + `selectOptions` / `selectOptionsFromPagination` for Formly selects),
   `shared/abstracts` (`BaseTableComponent`, `BaseFormComponent`),
+  `shared/ngx-formly/*` (ready Formly types — check before writing a new one),
   `shared/components/grid`, `table-filter`.
 - `src/assets/i18n/{uz,ru,en}.json` — UI strings. Every key must exist in all three.
 - Feature modules: `src/app/modules/admin/<group>/<feature>/`

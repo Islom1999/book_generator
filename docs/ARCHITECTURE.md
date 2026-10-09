@@ -5,7 +5,10 @@ shaklda yetkaziladigan ertak kitoblari. Xizmat avval faqat O'zbekiston uchun.
 
 Bu hujjat qabul qilingan qarorlar va tizim tuzilishini tasvirlaydi.
 Biznes qoidalari [BUSINESS_LOGIC.md](./BUSINESS_LOGIC.md), bosqichlar va
-vazifalar [ROADMAP.md](./ROADMAP.md) faylida.
+vazifalar [ROADMAP.md](./ROADMAP.md) faylida. Kod tuzilishi egasining
+umumiy shabloniga amal qiladi:
+[ARCHITECTURE_TEMPLATE.md](./ARCHITECTURE_TEMPLATE.md) (bu loyihada qanday
+qo'llangani 2-bo'limda).
 
 ## 1. Qabul qilingan qarorlar
 
@@ -41,17 +44,40 @@ Kod bunga tayyor: DB va fayl storage ulanishlari env orqali sozlanadi.
 ## 2. Repo tuzilishi
 
 ```
-backend/           NestJS monorepo
-  apps/api         REST API: mijoz (/api/...) va admin (/api/admin/...)
-  apps/worker      BullMQ consumer: AI generatsiya, upscale, print-PDF
-  apps/bot         Telegram bot (grammY)
-  libs/database    Entity'lar, migratsiyalar, DataSource
-  libs/common      Generic CRUD, guard'lar, DTO, navbat nomlari
+backend/                      NestJS monorepo
+  apps/api/src/
+    core/base/                abstract class'lar (shablon, 3-bo'lim)
+      base.interface.ts       PrimeTableQuerySwaggerDTO, PaginatedResult, ClientQuery
+      base.query.ts           umumiy so'rov yordamchilari (join, qidiruv)
+      base_class/             BaseAdminService, BaseAdminController
+      base_class_client/      BaseClientService, BaseClientController
+    common/                   guard, decorator, validator — faqat API'ga xos
+    auth/admin, auth/client   admin va mijoz kirishi
+    modules/admin/<entity>/   <entity>.controller|service|module.ts + dto/
+    modules/client/<entity>/  mijoz (storefront) endpointlari
+  apps/worker                 BullMQ consumer: AI generatsiya, upscale, print-PDF
+  apps/bot                    Telegram bot (grammY)
+  libs/entities               @app/entities — TypeORM entity'lar (hamma ilova)
+  libs/database               @app/database — DB modul, migratsiyalar, DataSource
+  libs/queues                 @app/queues — navbat nomlari va Redis ulanishi (api + worker + bot)
 admin/             Fuse admin panel (Angular)
 client/            Mijoz sayti (1-bosqichda qo'shiladi)
 legacy/            Eski MVP — faqat ma'lumot uchun, yangi kod bu yerga yozilmaydi
 docs/              Shu hujjatlar
 ```
+
+### Shablondan farqlar (ataylab)
+
+| Shablon | Bu loyiha | Sabab |
+| --- | --- | --- |
+| `CostumBaseEntity`: `id`, sanalar, `deleted_at` | + `version_id` | Fuse `IBaseModel` uni kutadi |
+| Base entity `apps/api/src/core/base/` da | `libs/entities/src/base.entity.ts` da | Entity'lar lib'da, lib ilovadan import qila olmaydi |
+| `bace.interface.ts` | `base.interface.ts` | Imlo |
+| Admin modul: `<name>-table/-form.component.ts` | `fuse-schematics:feature` tuzilmasi (`common/`, `pages/`) | Egasining generatori shunday yaratadi |
+| `apps/cron` | Hali yo'q | Rejalashtirilgan ishlar paydo bo'lganda qo'shiladi (suratlarni o'chirish, `CUSTOMER_REVIEW` taymeri) |
+
+Migratsiya CLI (`libs/database/src/data-source.ts`) entity'larni nisbiy yo'l
+bilan oladi: oddiy `tsc` chiqishi `@app/*` alias'larini tushunmaydi.
 
 Nima uchun to'liq microservice emas: boshlang'ich bosqichda alohida ilovalar
 (`api`, `worker`, `bot`) bitta repo va umumiy `libs` bilan yetarli. Ular
@@ -65,7 +91,7 @@ ajratilgani uchun kerak bo'lganda alohida servisga chiqarish oson.
   (`id`, `version_id`, `created_at`, `updated_at`, `deleted_at`).
 - O'chirish **soft delete**: yozuv arxivga tushadi va tiklanishi mumkin.
 - Har bir admin CRUD resursi Fuse `BaseCrudService` kutgan marshrutlarni beradi
-  (`libs/common/src/crud/crud.controller.ts`):
+  (`BaseAdminController`, `apps/api/src/core/base/base_class/base.controller.ts`):
 
 | Marshrut | Vazifasi |
 | --- | --- |
@@ -79,6 +105,10 @@ ajratilgani uchun kerak bo'lganda alohida servisga chiqarish oson.
 - Filtr va saralash faqat entity'ning haqiqiy ustunlarini qabul qiladi
   (SQL injection'dan himoya). `jsonb` tarjima ustunlarida qidiruv hamma
   tillarda birdan ishlaydi.
+- Mijoz (storefront) ro'yxatlari `BaseClientController` orqali: `GET /` →
+  `{ data, total, page, limit }` (`?page=1&limit=20&search=` va servisda
+  ruxsat etilgan filtrlar, masalan `/api/districts?region_id=`), `GET /:id`.
+  Arxiv yo'q; faol bo'lmagan yozuvlar ko'rinmaydi.
 - Validatsiya: `class-validator`, `whitelist` + `forbidNonWhitelisted`.
 - Rate-limit: global 120/min, login endpointlari 5–10/min.
 - Swagger: `/api/docs` (faqat production bo'lmagan muhitda).

@@ -1,50 +1,73 @@
 ---
 name: backend-crud
-description: Add a new database entity with an admin CRUD API (and optional public endpoint) in the NestJS backend, following the Fuse admin contract. Use when a new reference table or admin-managed resource is needed (book formats, templates, promo codes, etc.).
+description: Add a new entity with an admin CRUD API (BaseAdminService/BaseAdminController) and, if needed, a storefront endpoint (BaseClientService/BaseClientController), following the owner's architecture template. Use for any new admin-managed resource (book formats, templates, promo codes, etc.).
 ---
 
 # Backend CRUD resource
 
-Reference implementation: `backend/apps/api/src/reference/` + `backend/libs/database/src/entities/region.entity.ts`.
+Rules come from `docs/ARCHITECTURE_TEMPLATE.md` §3. Reference implementations:
+`backend/apps/api/src/modules/admin/regions/` (simple), `.../districts/` (relation),
+`.../languages/` (business override), `modules/client/districts/` (storefront filter).
+
+Per resource you write: 1 entity + 1 service + 1 controller (+ DTOs, module).
+If you find yourself writing more CRUD code than that, the base class is missing
+a feature — extend the base instead of patching the module.
 
 ## Steps
 
-1. **Entity** — `backend/libs/database/src/entities/<name>.entity.ts`
-   - `@Entity('<plural_snake>')`, `extends BaseEntity` (from `./base.entity.js`).
+1. **Entity** — `backend/libs/entities/src/<name>.entity.ts`
+   - `@Entity('<plural_snake>')`, `extends CostumBaseEntity` (`./base.entity.js`).
    - Columns `snake_case`, explicit `type` on every `@Column`.
    - Translatable text: `@Column({ type: 'jsonb' }) name: Translatable;`
-   - Money: `@Column({ type: 'bigint' })` in tiyin (see `business-rules` skill).
+   - Money: `@Column({ type: 'bigint' })` in tiyin (see `business-rules`).
    - Relations: `@ManyToOne(() => Region, { onDelete: 'RESTRICT' }) @JoinColumn({ name: 'region_id' }) region: Relation<Region>;`
-     plus an explicit `@Column({ type: 'uuid' }) region_id: string;`
-   - Unique constraints that must ignore archived rows: `@Index({ unique: true, where: '"deleted_at" IS NULL' })`.
-   - Export it from `entities/index.ts` **and** add it to `ENTITIES`.
-2. **Migration** — follow the `db-migration` skill (`npm run migration:generate --name=AddXxx`).
-3. **DTOs** — `Create<Name>Dto` with `class-validator` decorators for every field
-   (`@IsTranslatable()` from `@app/common` for jsonb text, `@IsUUID()` for FKs,
-   `@IsOptional()` for optional). `Update<Name>Dto extends PartialType(Create<Name>Dto)`
-   with `PartialType` from `@nestjs/swagger`. Unknown fields are rejected globally
-   (`forbidNonWhitelisted`), so the DTO must list every field the admin form sends.
-4. **Service** — `@Injectable() class XService extends BaseCrudService<X>`:
-   `super(repo, { searchFields: [...], relations: ['region'], defaultSort: { field, order } })`.
-   Put invariants in `create`/`update` overrides (see `LanguagesService.keepSingleDefault`).
-   Real business workflows (orders, wallet) do NOT go here — use a domain service.
-5. **Admin controller** —
+     plus `@Column({ type: 'uuid' }) region_id: string;`
+   - Unique ignoring archived rows: `@Index({ unique: true, where: '"deleted_at" IS NULL' })`.
+   - Export from `libs/entities/src/index.ts` **and** add to `ENTITIES`.
+2. **Migration** — `db-migration` skill.
+3. **DTOs** — `modules/admin/<plural>/dto/create-<singular>.dto.ts` with
+   `class-validator` on every field (`@IsTranslatable()` from `common/`, `@IsUUID()`
+   for FKs, `@IsOptional()`), and `update-<singular>.dto.ts`:
+   `extends PartialType(CreateXDto)` (`@nestjs/swagger`). Unknown fields are rejected,
+   so the DTO must list every field the admin form sends.
+4. **Service** — `modules/admin/<plural>/<plural>.service.ts`:
    ```ts
-   @Controller('admin/<plural-kebab>')
-   @AdminAuth(AdminRole.OPERATOR)          // permission: addresses.manage (BUSINESS_LOGIC §9)
-   export class XAdminController extends CrudController<X>({ create: CreateXDto, update: UpdateXDto }) {
-     constructor(readonly service: XService) { super(); }
+   @Injectable()
+   export class XsService extends BaseAdminService<X, CreateXDto, UpdateXDto> {
+     constructor(@InjectRepository(X) repository: Repository<X>) {
+       super(repository, { searchFields: [...], relations: ['region', 'region.country'], defaultSort: { field, order } });
+     }
    }
    ```
-   Pick the permission key from the §9 catalogue (add a new key there if none fits).
-   Read-only or restricted resources: write explicit routes instead (see `users/users.admin.ts`).
-6. **Public endpoint** (only if the client site needs it) — separate controller without
-   `/admin`, return only active, non-sensitive fields.
-7. **Module** — `TypeOrmModule.forFeature([X])`, controllers, providers; import it in
-   `apps/api/src/app.module.ts`. Relative imports end with `.js`.
-8. **Verify** — `npm run typecheck && npm run lint && npm test`, start the API and
-   smoke-test with curl: sign in (`POST /api/admin/auth/sign-in`), then
-   `POST /api/admin/<x>/pagination` with `{"first":0,"rows":10}`, create, update,
-   delete → archive → `GET repair/:id`. Check an admin without the permission gets 403.
-9. Add the admin page with the `admin-crud-page` skill and update
-   `docs/ARCHITECTURE.md` §6 (✅) and `docs/ROADMAP.md`.
+   Business invariants: override `create`/`update`/`delete` and call `super`.
+5. **Controller** — `<plural>.controller.ts`:
+   ```ts
+   @ApiTags('admin / <plural>')
+   @ApiBearerAuth()
+   @Controller('admin/<plural-kebab>')
+   @AdminAuth(AdminRole.OPERATOR) // permission: addresses.manage
+   export class XsController extends BaseAdminController<X, CreateXDto, UpdateXDto> {
+     constructor(service: XsService) { super(service); }
+     protected dtoClassCreate() { return CreateXDto; }
+     protected dtoClassUpdate() { return UpdateXDto; }
+   }
+   ```
+   Pick the permission key from BUSINESS_LOGIC §9 (add a key there if none fits).
+   If some base routes must not exist (no create/delete), write explicit routes
+   without extending the base (see `modules/admin/customers`).
+6. **Module** — `<plural>.module.ts` (`TypeOrmModule.forFeature([X])`, controller,
+   service; export the service only if another module needs it) and add it to
+   `modules/admin/admin.module.ts`.
+7. **Storefront** (only if the client site needs it) — `modules/client/<plural>/`:
+   `ClientXsService extends BaseClientService<X>` with `where: { is_active: true }`,
+   `filterFields` for parent ids, `searchFields`; `ClientXsController extends
+   BaseClientController<X>` with `@Controller('<plural-kebab>')`; register in
+   `modules/client/client.module.ts`. Never expose internal columns — if the entity has
+   any, override `query()` to `select` only public fields.
+8. **Verify** — `npm run typecheck && npm run lint && npm test && npm run build`, start
+   the API and curl: sign in (`POST /api/admin/auth/sign-in`), `POST /api/admin/<x>/pagination`
+   `{"first":0,"rows":10}`, create (and an extra unknown field → 400), update, delete →
+   `GET archive/:id` → `GET repair/:id`, missing permission → 403, no token → 401;
+   storefront `GET /api/<x>?page=1&limit=20` and a bad filter → 400.
+9. Add the admin page (`admin-crud-page` skill), update `docs/ARCHITECTURE.md` §6 (✅)
+   and `docs/ROADMAP.md`.

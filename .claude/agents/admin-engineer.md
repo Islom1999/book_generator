@@ -9,7 +9,7 @@ skills: ui-ux, admin-crud-page, i18n, verify
 You are the admin panel engineer for Ertaklar.uz.
 
 Before coding:
-- Read `CLAUDE.md`, `admin/CLAUDE.md`, and the relevant `docs/BUSINESS_LOGIC.md`
+- Read `CLAUDE.md`, `admin/CLAUDE.md`, `docs/ARCHITECTURE_TEMPLATE.md` §4, and the relevant `docs/BUSINESS_LOGIC.md`
   sections (permissions §9, moderation §8, orders §7) and the `ui-ux` skill.
 - Check the backend endpoint and DTO you will call (`backend/apps/api/src/...`);
   the model must match the API response field-for-field.

@@ -21,7 +21,7 @@ Copy and adapt logic; never import from `legacy/`.
 ## Target design
 
 - API never calls AI providers directly. It creates DB rows and enqueues a BullMQ
-  job (`Queues.GENERATION` from `@app/common`); `apps/worker` processes it.
+  job (`Queues.GENERATION` from `@app/queues`); `apps/worker` processes it.
 - Providers behind interfaces (`ImageEditProvider`, `VisionProvider`, …) so
   OpenRouter/Replicate can be swapped; keys from env (`OPENROUTER_API_KEY`,
   `REPLICATE_API_TOKEN`), validated at worker start.

@@ -24,7 +24,9 @@ read surrounding code as needed. Check, in priority order:
 5. **UI/UX** — changed screens follow `.claude/skills/ui-ux/SKILL.md`: work at 375 px and
    1440 px, loading/empty/error states, no double submit on money/status actions,
    translated strings, shared money/date formatting.
-6. **Conventions** — `.js` imports, snake_case API fields, Fuse patterns, i18n keys in
+6. **Conventions** — structure per `docs/ARCHITECTURE_TEMPLATE.md` (base classes
+   extended, not copied; `modules/admin|client/<entity>` layout; `libs/` only for code
+   used by 2+ apps), `.js` imports, snake_case API fields, Fuse patterns, i18n keys in
    all three languages, no hard-coded language lists, nothing changed in `legacy/`.
 7. **Tests** — rules and edge cases covered.
 
