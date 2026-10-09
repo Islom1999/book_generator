@@ -5,7 +5,9 @@ import { ITableFilterConfig, TableFilterComponent } from 'app/shared/components/
 import { BaseTableComponent } from 'app/shared/abstracts'
 import { ButtonModule } from 'primeng/button'
 import { DialogService } from 'primeng/dynamicdialog'
-import { DistrictGridService, DistrictOptionsService, IDistrict } from '../../common'
+import { RegionService } from '../../../region/common'
+import { DistrictGridService, IDistrict } from '../../common'
+import { pickTranslation } from 'app/shared/translatable/translatable'
 import { DistrictFormComponent } from '../district-form/district-form.component'
 
 @Component({
@@ -19,7 +21,9 @@ import { DistrictFormComponent } from '../district-form/district-form.component'
 })
 export class DistrictListComponent extends BaseTableComponent<IDistrict> {
   gridService = inject(DistrictGridService)
-  private options = inject(DistrictOptionsService)
+  private regionOptions = inject(RegionService).selectOptions((region) =>
+    pickTranslation(region.name, this.transloco.getActiveLang()),
+  )
   formComponent = DistrictFormComponent
   showAddButton = true
 
@@ -32,7 +36,7 @@ export class DistrictListComponent extends BaseTableComponent<IDistrict> {
         key: 'region_id',
         type: 'select',
         label: 'admin.district.fields.region_id',
-        props: { options: this.options.regionOptions },
+        props: { options: this.regionOptions },
       },
     ],
   }

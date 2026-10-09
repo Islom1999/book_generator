@@ -5,7 +5,9 @@ import { ITableFilterConfig, TableFilterComponent } from 'app/shared/components/
 import { BaseTableComponent } from 'app/shared/abstracts'
 import { ButtonModule } from 'primeng/button'
 import { DialogService } from 'primeng/dynamicdialog'
-import { PostOfficeGridService, PostOfficeOptionsService, IPostOffice } from '../../common'
+import { DistrictService } from '../../../district/common'
+import { PostOfficeGridService, IPostOffice } from '../../common'
+import { pickTranslation } from 'app/shared/translatable/translatable'
 import { PostOfficeFormComponent } from '../post-office-form/post-office-form.component'
 
 @Component({
@@ -19,7 +21,9 @@ import { PostOfficeFormComponent } from '../post-office-form/post-office-form.co
 })
 export class PostOfficeListComponent extends BaseTableComponent<IPostOffice> {
   gridService = inject(PostOfficeGridService)
-  private options = inject(PostOfficeOptionsService)
+  private districtOptions = inject(DistrictService).selectOptions((district) =>
+    pickTranslation(district.name, this.transloco.getActiveLang()),
+  )
   formComponent = PostOfficeFormComponent
   showAddButton = true
 
@@ -33,7 +37,7 @@ export class PostOfficeListComponent extends BaseTableComponent<IPostOffice> {
         key: 'district_id',
         type: 'select',
         label: 'admin.postOffice.fields.district_id',
-        props: { options: this.options.districtOptions },
+        props: { options: this.districtOptions },
       },
     ],
   }

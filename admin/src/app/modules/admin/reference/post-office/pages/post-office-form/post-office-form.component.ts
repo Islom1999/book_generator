@@ -2,10 +2,12 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { ReactiveFormsModule } from '@angular/forms'
 import { FormlyModule } from '@ngx-formly/core'
+import { pickTranslation } from 'app/shared/translatable/translatable'
 import { BaseFormComponent } from 'app/shared/abstracts'
 import { FormActionButtonsComponent } from 'app/shared'
 import { Observable } from 'rxjs'
-import { IPostOffice, PostOfficeOptionsService, PostOfficeService } from '../../common'
+import { DistrictService } from '../../../district/common'
+import { IPostOffice, PostOfficeService } from '../../common'
 import { ContentLanguagesService } from 'app/core/languages/content-languages.service'
 import { translatableFields } from 'app/shared/translatable/translatable'
 
@@ -20,7 +22,9 @@ import { translatableFields } from 'app/shared/translatable/translatable'
 export class PostOfficeFormComponent extends BaseFormComponent<IPostOffice> {
   private crudService = inject(PostOfficeService)
   private languages = inject(ContentLanguagesService)
-  private districtOptions = inject(PostOfficeOptionsService).districtOptions
+  private districtOptions = inject(DistrictService).selectOptions((district) =>
+    pickTranslation(district.name, this.transloco.getActiveLang()),
+  )
   readonly showDelete = true
 
   protected initFormFields(): void {

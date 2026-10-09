@@ -1,12 +1,18 @@
 import { inject, Injectable } from '@angular/core'
 import { IPagination } from 'app/core/services/base.model'
 import { BaseApiService } from 'app/core/services/base.service'
-import { Observable } from 'rxjs'
+import { map, Observable } from 'rxjs'
 
 export interface TableFilterRule {
   value: string | number | boolean | null
   matchMode: 'contains' | 'equals' | 'startsWith' | 'endsWith'
 }
+/** Option shape for Formly / PrimeNG selects. */
+export interface ISelectOption {
+  label: string
+  value: string | number
+}
+
 export class TableQueryDTO {
   first?: number
   rows?: number
@@ -55,5 +61,28 @@ export abstract class BaseCrudService<T> {
 
   repair(id: string): Observable<T> {
     return this.baseApi.get<T>(`${this.endpoint}/repair/${id}`)
+  }
+
+  /** All records as select options. Use `pickTranslation` in `label` for Translatable fields. */
+  selectOptions(
+    label: (item: T) => string,
+    value: (item: T) => string | number = (item) => (item as { id: string }).id,
+  ): Observable<ISelectOption[]> {
+    return this.getAll().pipe(
+      map((items) => items.map((item) => ({ label: label(item), value: value(item) }))),
+    )
+  }
+
+  /** Select options from a filtered page, for large tables (pass `globalFilter` / `filters`). */
+  selectOptionsFromPagination(
+    params: TableQueryDTO,
+    label: (item: T) => string,
+    value: (item: T) => string | number = (item) => (item as { id: string }).id,
+  ): Observable<ISelectOption[]> {
+    return this.getAllPagination(params, false).pipe(
+      map((page) =>
+        (page.data as unknown as T[]).map((item) => ({ label: label(item), value: value(item) })),
+      ),
+    )
   }
 }

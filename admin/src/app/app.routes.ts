@@ -3,6 +3,7 @@ import { initialDataResolver } from 'app/app.resolvers'
 import { AuthGuard } from 'app/core/auth/guards/auth.guard'
 import { NoAuthGuard } from 'app/core/auth/guards/noAuth.guard'
 import { LayoutComponent } from 'app/layout/layout.component'
+import { adminRoutes } from 'app/modules/admin'
 
 export const appRoutes: Route[] = [
   { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
@@ -41,50 +42,6 @@ export const appRoutes: Route[] = [
     canActivateChild: [AuthGuard],
     component: LayoutComponent,
     resolve: { initialData: initialDataResolver },
-    children: [
-      {
-        path: 'dashboard',
-        loadChildren: () => import('app/modules/admin/dashboard/dashboard.routes'),
-      },
-      {
-        path: 'users',
-        children: [
-          {
-            path: 'customers',
-            loadChildren: () => import('app/modules/admin/users/customer/customer.routes'),
-          },
-          {
-            path: 'admins',
-            loadChildren: () => import('app/modules/admin/users/admin-user/admin-user.routes'),
-          },
-        ],
-      },
-      {
-        path: 'reference',
-        children: [
-          {
-            path: 'regions',
-            loadChildren: () => import('app/modules/admin/reference/region/region.routes'),
-          },
-          {
-            path: 'districts',
-            loadChildren: () => import('app/modules/admin/reference/district/district.routes'),
-          },
-          {
-            path: 'post-offices',
-            loadChildren: () =>
-              import('app/modules/admin/reference/post-office/post-office.routes'),
-          },
-          {
-            path: 'languages',
-            loadChildren: () => import('app/modules/admin/reference/language/language.routes'),
-          },
-          {
-            path: 'settings',
-            loadChildren: () => import('app/modules/admin/reference/setting/setting.routes'),
-          },
-        ],
-      },
-    ],
+    children: adminRoutes,
   },
 ]

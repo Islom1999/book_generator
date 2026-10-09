@@ -5,7 +5,8 @@ import { FormlyModule } from '@ngx-formly/core'
 import { BaseFormComponent } from 'app/shared/abstracts'
 import { FormActionButtonsComponent } from 'app/shared'
 import { Observable } from 'rxjs'
-import { IDistrict, DistrictOptionsService, DistrictService } from '../../common'
+import { RegionService } from '../../../region/common'
+import { IDistrict, DistrictService } from '../../common'
 import { ContentLanguagesService } from 'app/core/languages/content-languages.service'
 import { pickTranslation, translatableFields } from 'app/shared/translatable/translatable'
 
@@ -20,7 +21,9 @@ import { pickTranslation, translatableFields } from 'app/shared/translatable/tra
 export class DistrictFormComponent extends BaseFormComponent<IDistrict> {
   private crudService = inject(DistrictService)
   private languages = inject(ContentLanguagesService)
-  private regionOptions = inject(DistrictOptionsService).regionOptions
+  private regionOptions = inject(RegionService).selectOptions((region) =>
+    pickTranslation(region.name, this.transloco.getActiveLang()),
+  )
   readonly showDelete = true
 
   protected initFormFields(): void {
