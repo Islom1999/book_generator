@@ -48,18 +48,19 @@ export class AdminUsersService extends BaseAdminService<
   override async update(id: string, dto: UpdateAdminUserDto) {
     const target = await this.findOne(id);
     const actor = requestContext().admin;
-    if (target.is_super_admin || dto.is_super_admin !== undefined) {
+    // Forms send every field; only real changes are checked.
+    const changes = (key: 'role_id' | 'is_super_admin' | 'is_active') =>
+      dto[key] !== undefined && dto[key] !== target[key];
+    if (target.is_super_admin || changes('is_super_admin')) {
       assertSuperAdmin();
     }
     if (
       actor?.id === id &&
-      (dto.role_id !== undefined ||
-        dto.is_super_admin !== undefined ||
-        dto.is_active !== undefined)
+      (changes('role_id') || changes('is_super_admin') || changes('is_active'))
     ) {
       throw new ForbiddenException('You cannot change your own role or status');
     }
-    if (dto.role_id !== undefined) {
+    if (changes('role_id')) {
       await this.assertAssignableRole(dto.role_id);
     }
     const losesSuperAdmin =
