@@ -1,70 +1,59 @@
-# Ertaklar.uz — MVP
+# Ertaklar.uz
 
-Personalized children’s storybooks (WonderWraps-style) for Uzbekistan.
+Bola bosh qahramon bo'lgan shaxsiylashtirilgan ertak kitoblari: AI yordamida
+yaratiladi va bosma shaklda yetkaziladi.
 
-**Stack:** Angular 19 · NestJS · PostgreSQL · TypeORM · OpenRouter
+- Biznes-logika: [docs/BUSINESS_LOGIC.md](docs/BUSINESS_LOGIC.md)
+- UI/UX qoidalari: [docs/UI_UX.md](docs/UI_UX.md)
+- Arxitektura va qarorlar: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- Bosqichlar va vazifalar: [docs/ROADMAP.md](docs/ROADMAP.md)
 
-## What the MVP does
+## Tuzilma
 
-1. Catalog of 3 seeded books
-2. Wizard: name, gender, age, photo, language (UZ/RU), dedication
-3. OpenRouter writes the story and draws preview pages (child photo as reference)
-4. Cart + checkout (cash on delivery)
-5. Admin at `/admin` to see orders
+| Papka | Nima |
+| --- | --- |
+| `backend/` | NestJS monorepo: `api`, `worker`, `bot` + `libs/` |
+| `admin/` | Fuse admin panel (Angular 20, PrimeNG) |
+| `legacy/` | Eski MVP, faqat ma'lumot uchun |
+| `docs/` | Hujjatlar |
+| `.claude/` | Claude Code sozlamalari: skill'lar va subagentlar |
 
-Remaining pages are generated after the order is placed.
+## Lokal ishga tushirish
 
-## Run locally
+Talablar: Node.js 22+, npm 11+ (`npx npm@11` ham bo'ladi), Docker.
 
 ```bash
-# 1) Postgres
+# 1) PostgreSQL (localhost:55433) va Redis (localhost:6379)
 docker compose up -d
-# Postgres is on localhost:55432 (avoids clashing with other local Postgres instances)
 
-# 2) API  (http://localhost:3000/api)
-cd api
-cp .env.example .env   # then set OPENROUTER_API_KEY
+# 2) Backend
+cd backend
+cp .env.example .env
 npm install
-npm run start:dev
+npm run migration:run
+npm run start:api        # http://localhost:3000/api, Swagger: /api/docs
+npm run start:worker     # alohida terminalda
+npm run start:bot        # TELEGRAM_BOT_TOKEN bo'lsa
 
-# 3) Web  (http://localhost:4200)
-cd web
+# 3) Admin panel
+cd admin
 npm install
-npm start
+npm start -- --port 4300 # http://localhost:4300
 ```
 
-Open [http://localhost:4200](http://localhost:4200).
+Admin panelga kirish: `.env` dagi `ADMIN_EMAIL` / `ADMIN_PASSWORD`
+(standart qiymatlari `admin@ertaklar.uz` / `admin12345`). Birinchi super admin
+API birinchi marta ishga tushganda yaratiladi.
 
-### Admin
+## Backend buyruqlari
 
-- URL: http://localhost:4200/admin
-- Email: `admin@ertaklar.uz`
-- Password: `admin123` (change in `api/.env`)
+| Buyruq | Vazifasi |
+| --- | --- |
+| `npm run typecheck` | TypeScript tekshiruvi |
+| `npm run lint` | oxlint |
+| `npm test` | vitest |
+| `npm run build` | api, worker, bot build |
+| `npm run migration:generate --name=AddOrders` | entity o'zgarishidan migratsiya yaratish |
+| `npm run migration:run` / `migration:revert` | migratsiyalarni qo'llash yoki bekor qilish |
 
-Without `OPENROUTER_API_KEY` the API still runs and returns a sample text story (no illustrations).
-
-## OpenRouter
-
-Get a key at [https://openrouter.ai/](https://openrouter.ai/). Defaults in `.env`:
-
-- Chat / vision: `google/gemini-2.5-flash`
-- Images: `black-forest-labs/flux.2-schnell`
-
-## API
-
-| Method | Path | Auth |
-| --- | --- | --- |
-| POST | `/api/auth/login` | |
-| GET | `/api/books` | |
-| GET | `/api/books/:slug` | |
-| POST | `/api/personalizations` | multipart `photo` |
-| GET | `/api/personalizations/:id` | poll status |
-| POST | `/api/orders` | |
-| GET | `/api/orders` | JWT |
-| PATCH | `/api/orders/:id` | JWT |
-
-## Notes
-
-- TypeORM `synchronize: true` is for MVP only — switch to migrations before production.
-- Uploads are stored in `api/uploads/` and served at `/uploads/`.
-- Payme/Click and print-ready PDF are out of scope for this MVP.
+Baza sxemasi faqat migratsiyalar orqali o'zgaradi (`synchronize` o'chirilgan).

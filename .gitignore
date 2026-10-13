@@ -5,3 +5,11 @@ uploads
 .env
 *.log
 .DS_Store
+.claude/settings.local.json
+
+# Local file storage (STORAGE_DRIVER=local)
+backend/storage/
+
+# deploy packaging
+/release/
+/release.tgz

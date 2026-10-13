@@ -1,0 +1,41 @@
+import { AdminRole } from './admin-role.entity.js';
+import { AdminUser } from './admin-user.entity.js';
+import { AuditLog } from './audit-log.entity.js';
+import { District } from './district.entity.js';
+import { Language } from './language.entity.js';
+import { PostOffice } from './post-office.entity.js';
+import { Region } from './region.entity.js';
+import { Setting } from './setting.entity.js';
+import { StoredFile } from './stored-file.entity.js';
+import { User } from './user.entity.js';
+import { UserIdentity } from './user-identity.entity.js';
+
+export * from './base.entity.js';
+export * from './translatable.js';
+export * from './admin-role.entity.js';
+export * from './admin-user.entity.js';
+export * from './audit-log.entity.js';
+export * from './district.entity.js';
+export * from './language.entity.js';
+export * from './post-office.entity.js';
+export * from './region.entity.js';
+export * from './setting.entity.js';
+export * from './setting-keys.js';
+export * from './stored-file.entity.js';
+export * from './user.entity.js';
+export * from './user-identity.entity.js';
+
+/** Registered explicitly (no globs) so bundled apps and the CLI see the same list. */
+export const ENTITIES = [
+  AdminRole,
+  AdminUser,
+  AuditLog,
+  District,
+  Language,
+  PostOffice,
+  Region,
+  Setting,
+  StoredFile,
+  User,
+  UserIdentity,
+];

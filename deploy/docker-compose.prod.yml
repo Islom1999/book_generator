@@ -1,0 +1,87 @@
+# Production stack on the server (see deploy/README.md). Secrets come from
+# /root/ertaklar/.env, created by server-deploy.sh on the first deploy.
+name: ertaklar
+
+x-app: &app
+  build: ../backend
+  image: ertaklar-backend:latest
+  restart: unless-stopped
+  env_file: /root/ertaklar/.env
+  environment:
+    NODE_ENV: production
+    DB_HOST: postgres
+    DB_PORT: '5432'
+    REDIS_HOST: redis
+    REDIS_PORT: '6379'
+    STORAGE_LOCAL_DIR: /data/storage
+  volumes:
+    - storage:/data/storage
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_started
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redisdata:/data
+
+  migrate:
+    <<: *app
+    restart: 'no'
+    command:
+      [
+        'node',
+        'node_modules/typeorm/cli.js',
+        '-d',
+        'dist/db/database/src/data-source.js',
+        'migration:run',
+      ]
+
+  api:
+    <<: *app
+    command: ['node', 'dist/apps/api/main.js']
+    ports:
+      - '127.0.0.1:3100:3000'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+
+  worker:
+    <<: *app
+    command: ['node', 'dist/apps/worker/main.js']
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  bot:
+    <<: *app
+    command: ['node', 'dist/apps/bot/main.js']
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:
+  redisdata:
+  storage:

@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/db",
+    "rootDir": "..",
+    "incremental": false,
+    "declaration": false,
+    "types": ["node"]
+  },
+  "files": ["src/data-source.ts"],
+  "include": ["src/migrations/**/*"]
+}

@@ -1,0 +1,224 @@
+{
+  "nav": {
+    "dashboard": "Boshqaruv paneli",
+    "users": "Foydalanuvchilar",
+    "customers": "Mijozlar",
+    "admins": "Adminlar",
+    "reference": "Spravochniklar",
+    "regions": "Viloyatlar",
+    "districts": "Tumanlar",
+    "postOffices": "Pochta bo‘limlari",
+    "languages": "Tillar",
+    "settings": "Sozlamalar",
+    "roles": "Rollar",
+    "system": "Tizim",
+    "audit": "Audit jurnali"
+  },
+  "form": {
+    "validation": {
+      "required": "Majburiy maydon"
+    }
+  },
+  "active": {
+    "data": "Faol"
+  },
+  "archive": {
+    "data": "Arxiv"
+  },
+  "admin": {
+    "dashboard": {
+      "comingSoon": "Buyurtmalar, tushum va AI xarajatlari vidjetlari 1-bosqichda qo‘shiladi."
+    },
+    "common": {
+      "cancel": "Bekor qilish",
+      "create": "Yaratish",
+      "update": "Saqlash",
+      "delete": "O‘chirish",
+      "filters": "Filtrlar",
+      "name": "Nomi",
+      "isActive": "Faol",
+      "sortOrder": "Tartib",
+      "createdAt": "Yaratilgan",
+      "deleteTitle": "O‘chirishni tasdiqlang",
+      "deleteMessage": "“{{name}}” arxivga o‘tkazilsinmi? Keyin tiklash mumkin.",
+      "updatedAt": "Yangilangan",
+      "loadError": "Ma‘lumotni yuklab bo‘lmadi",
+      "loading": "Yuklanmoqda…",
+      "close": "Yopish"
+    },
+    "grid": {
+      "noData": "Ma’lumot topilmadi",
+      "total": "Jami: {{count}}",
+      "filter": {
+        "yes": "Ha",
+        "no": "Yo‘q"
+      },
+      "actions": {
+        "clearFilter": "Filtrni tozalash",
+        "resetFilters": "Filtrlarni tozalash",
+        "exportCsv": "CSV yuklab olish",
+        "exportExcel": "Excel yuklab olish"
+      }
+    },
+    "language": {
+      "title": "Tillar",
+      "addNew": "Til qo‘shish",
+      "edit": "Tilni tahrirlash",
+      "create": "Yangi til",
+      "fields": {
+        "code": "Kod (uz, ru, en)",
+        "name": "Nomi (inglizcha)",
+        "native_name": "O‘z tilidagi nomi",
+        "is_default": "Asosiy til"
+      }
+    },
+    "region": {
+      "title": "Viloyatlar",
+      "addNew": "Viloyat qo‘shish",
+      "edit": "Viloyatni tahrirlash",
+      "create": "Yangi viloyat",
+      "fields": {
+        "name": "Nomi",
+        "code": "Kod"
+      }
+    },
+    "district": {
+      "title": "Tumanlar",
+      "addNew": "Tuman qo‘shish",
+      "edit": "Tumanni tahrirlash",
+      "create": "Yangi tuman",
+      "fields": {
+        "name": "Nomi",
+        "region": "Viloyat",
+        "region_id": "Viloyat",
+        "region_name": "Viloyat"
+      }
+    },
+    "postOffice": {
+      "title": "Pochta bo‘limlari",
+      "addNew": "Bo‘lim qo‘shish",
+      "edit": "Bo‘limni tahrirlash",
+      "create": "Yangi bo‘lim",
+      "fields": {
+        "postal_code": "Pochta indeksi",
+        "name": "Nomi",
+        "address": "Manzil",
+        "district": "Tuman",
+        "district_id": "Tuman",
+        "district_name": "Tuman",
+        "latitude": "Kenglik",
+        "longitude": "Uzunlik"
+      }
+    },
+    "setting": {
+      "title": "Sozlamalar",
+      "addNew": "Sozlama qo‘shish",
+      "edit": "Sozlamani tahrirlash",
+      "create": "Yangi sozlama",
+      "fields": {
+        "key": "Kalit",
+        "value": "Qiymat (JSON)",
+        "description": "Izoh"
+      },
+      "invalidJson": "JSON noto‘g‘ri"
+    },
+    "adminUser": {
+      "title": "Adminlar",
+      "addNew": "Admin qo‘shish",
+      "edit": "Adminni tahrirlash",
+      "create": "Yangi admin",
+      "fields": {
+        "full_name": "F.I.Sh.",
+        "email": "Email",
+        "role": "Rol",
+        "password": "Parol",
+        "newPassword": "Yangi parol (o‘zgartirish uchun)",
+        "last_login_at": "Oxirgi kirish",
+        "is_super_admin": "Super admin"
+      }
+    },
+    "customer": {
+      "title": "Mijozlar",
+      "addNew": "",
+      "edit": "Mijozni tahrirlash",
+      "create": "",
+      "fields": {
+        "full_name": "F.I.Sh.",
+        "phone": "Telefon",
+        "email": "Email",
+        "is_blocked": "Bloklangan",
+        "last_login_at": "Oxirgi kirish"
+      }
+    },
+    "adminRole": {
+      "title": "Rollar",
+      "addNew": "Rol qo‘shish",
+      "edit": "Rolni tahrirlash",
+      "create": "Yangi rol",
+      "fields": {
+        "description": "Tavsif",
+        "permissions": "Ruxsatlar"
+      }
+    },
+    "auditLog": {
+      "title": "Audit jurnali",
+      "detail": "Amal tafsilotlari",
+      "system": "Tizim",
+      "noChanges": "Maydon o‘zgarishlari yo‘q",
+      "addNew": "—",
+      "fields": {
+        "created_at": "Vaqt",
+        "admin": "Admin",
+        "action": "Amal",
+        "entity": "Jadval",
+        "entity_id": "Yozuv ID",
+        "ip": "IP",
+        "field": "Maydon",
+        "before": "Oldin",
+        "after": "Keyin"
+      }
+    }
+  },
+  "permissionGroups": {
+    "admins": "Adminlar",
+    "references": "Spravochniklar",
+    "customers": "Mijozlar",
+    "catalog": "Katalog",
+    "orders": "Buyurtmalar",
+    "moderation": "Moderatsiya",
+    "print": "Bosma va yetkazish",
+    "finance": "Moliya",
+    "other": "Boshqa"
+  },
+  "permissions": {
+    "admins.view": "Adminlarni ko‘rish",
+    "admins.manage": "Adminlarni boshqarish",
+    "roles.manage": "Rollarni boshqarish",
+    "languages.manage": "Tillar",
+    "settings.manage": "Sozlamalar",
+    "addresses.manage": "Manzillar (viloyat, tuman, pochta)",
+    "customers.view": "Mijozlarni ko‘rish",
+    "customers.edit": "Mijozlarni tahrirlash",
+    "customers.block": "Mijozlarni bloklash",
+    "customers.grant_trial": "Qo‘shimcha trial berish",
+    "templates.view": "Shablonlarni ko‘rish",
+    "templates.manage": "Shablonlarni boshqarish",
+    "formats.manage": "Kitob formatlari",
+    "orders.view": "Buyurtmalarni ko‘rish",
+    "orders.cancel": "Buyurtmani bekor qilish",
+    "orders.hold": "Buyurtmani to‘xtatib turish",
+    "moderation.review": "Sahifalarni tekshirish",
+    "moderation.regenerate": "Qayta generatsiya",
+    "moderation.edit_text": "Matnni tahrirlash",
+    "print.manage": "Bosmani boshqarish",
+    "print.download": "Bosma fayllarini yuklab olish",
+    "shipping.manage": "Yetkazishni boshqarish",
+    "wallet.view": "Balanslarni ko‘rish",
+    "wallet.adjust": "Balansni to‘ldirish va tuzatish",
+    "wallet.withdraw": "Pulni naqd qaytarish",
+    "payments.view": "To‘lovlarni ko‘rish",
+    "reports.finance": "Moliyaviy hisobotlar",
+    "dashboard.view": "Dashboard",
+    "audit.view": "Audit jurnali"
+  }
+}

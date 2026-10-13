@@ -25,10 +25,10 @@ jobs:
             cd /root/book_generator
             git pull
 
-            cd /root/book_generator/web
+            cd /root/book_generator/legacy/web
             npm install
             npm run build
 
             sudo rsync -av --delete \
-              /root/book_generator/web/dist/web/browser/ \
+              /root/book_generator/legacy/web/dist/web/browser/ \
               /var/www/ertaklar.topsites.uz/

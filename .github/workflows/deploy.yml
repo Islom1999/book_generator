@@ -1,0 +1,68 @@
+name: Deploy API + admin
+
+# Builds the admin panel here, ships backend sources + admin dist to the
+# server and runs deploy/server-deploy.sh there (Docker builds the backend).
+# Auth: repo secret SSH_PRIVATE_KEY (preferred) or SSH_PRIVATE_PASSWORD.
+
+on:
+  push:
+    branches: [main, claude/dreamy-sagan-17otsy]
+    paths: [backend/**, admin/**, deploy/**, .github/workflows/deploy.yml]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  SERVER_HOST: 94.130.33.123
+  SERVER_USERNAME: root
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build admin
+        working-directory: admin
+        run: |
+          npx -y npm@11 ci --legacy-peer-deps
+          npx ng build
+
+      - name: Pack release
+        run: |
+          mkdir -p release
+          cp -r admin/dist/fuse/browser release/admin-dist
+          git archive HEAD backend deploy | tar -x -C release
+          tar -czf release.tgz -C release .
+
+      - name: Upload release
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ env.SERVER_HOST }}
+          username: ${{ env.SERVER_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          password: ${{ secrets.SSH_PRIVATE_PASSWORD }}
+          source: release.tgz
+          target: /root/ertaklar/incoming
+
+      - name: Run deploy on server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ env.SERVER_HOST }}
+          username: ${{ env.SERVER_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          password: ${{ secrets.SSH_PRIVATE_PASSWORD }}
+          command_timeout: 30m
+          script: |
+            set -e
+            rm -rf /root/ertaklar/release
+            mkdir -p /root/ertaklar/release
+            tar -xzf /root/ertaklar/incoming/release.tgz -C /root/ertaklar/release
+            bash /root/ertaklar/release/deploy/server-deploy.sh
