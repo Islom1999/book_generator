@@ -6,7 +6,7 @@ name: Deploy API + admin
 
 on:
   push:
-    branches: [claude/dreamy-sagan-17otsy]
+    branches: [main, claude/dreamy-sagan-17otsy]
     paths: [backend/**, admin/**, deploy/**, .github/workflows/deploy.yml]
   workflow_dispatch:
 
