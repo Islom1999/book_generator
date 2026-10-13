@@ -1,12 +1,14 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { ReactiveFormsModule } from '@angular/forms'
-import { FormlyModule } from '@ngx-formly/core'
+import { FormlyFieldConfig, FormlyModule } from '@ngx-formly/core'
 import { BaseFormComponent } from 'app/shared/abstracts'
 import { FormActionButtonsComponent } from 'app/shared'
 import { Observable } from 'rxjs'
 import { IAdminUser, AdminUserService } from '../../common'
-import { ROLE_OPTIONS } from 'app/core/user/roles'
+import { PermissionService } from 'app/core/permission/permission.service'
+import { AdminRoleService } from 'app/modules/admin/users/admin-role/common/services/admin-role.service'
+import { pickTranslation } from 'app/shared/translatable/translatable'
 
 @Component({
   selector: 'app-admin-user-form',
@@ -18,10 +20,25 @@ import { ROLE_OPTIONS } from 'app/core/user/roles'
 })
 export class AdminUserFormComponent extends BaseFormComponent<IAdminUser> {
   private crudService = inject(AdminUserService)
-  readonly showDelete = true
+  private access = inject(PermissionService)
+  private roleOptions = inject(AdminRoleService).selectOptions((role) =>
+    pickTranslation(role.name, this.transloco.getActiveLang()),
+  )
+  readonly canManage = this.access.hasAny('admins.manage')
+  readonly showDelete = this.canManage
 
   protected initFormFields(): void {
     this.fields = [
+      {
+        // Admins with only `admins.view` see the form read-only.
+        props: { disabled: !this.canManage },
+        fieldGroup: this.editableFields(),
+      },
+    ]
+  }
+
+  private editableFields(): FormlyFieldConfig[] {
+    return [
       {
         key: 'full_name',
         type: 'input',
@@ -38,14 +55,25 @@ export class AdminUserFormComponent extends BaseFormComponent<IAdminUser> {
         },
       },
       {
-        key: 'role',
+        key: 'is_super_admin',
+        type: 'checkbox',
+        defaultValue: false,
+        // Only a super admin can grant or see this switch as editable.
+        hide: !this.access.isSuperAdmin(),
+        props: { label: 'admin.adminUser.fields.is_super_admin', translate: true },
+      },
+      {
+        key: 'role_id',
         type: 'select',
-        defaultValue: 'operator',
         props: {
           label: 'admin.adminUser.fields.role',
           translate: true,
-          required: true,
-          options: ROLE_OPTIONS,
+          options: this.roleOptions,
+          showClear: true,
+        },
+        expressions: {
+          'props.required': (field) => !field.model?.is_super_admin,
+          hide: (field) => !!field.model?.is_super_admin,
         },
       },
       {
@@ -93,7 +121,9 @@ export class AdminUserFormComponent extends BaseFormComponent<IAdminUser> {
     return {
       full_name: data.full_name,
       email: data.email,
-      role: data.role,
+      role_id: data.role_id,
+      // The API accepts this flag only from a super admin.
+      ...(this.access.isSuperAdmin() ? { is_super_admin: data.is_super_admin } : {}),
       is_active: data.is_active,
     } as Partial<IAdminUser> & { password?: string }
   }

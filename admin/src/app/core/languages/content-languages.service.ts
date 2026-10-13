@@ -22,14 +22,16 @@ export class ContentLanguagesService {
   private _api = inject(BaseApiService)
   readonly languages = signal<ContentLanguage[]>([])
 
+  /**
+   * Uses the public storefront list (active languages only), so every admin
+   * gets it regardless of permissions; `admin/languages` needs `languages.manage`.
+   */
   load(): Observable<ContentLanguage[]> {
-    return this._api.get<ContentLanguage[]>('admin/languages').pipe(
-      map((languages) =>
-        languages
-          .filter((language) => language.is_active)
-          .sort((a, b) => a.sort_order - b.sort_order),
-      ),
-      tap((languages) => this.languages.set(languages)),
-    )
+    return this._api
+      .get<{ data: ContentLanguage[] }>('languages', { queryParams: { limit: 100 } })
+      .pipe(
+        map(({ data }) => [...data].sort((a, b) => a.sort_order - b.sort_order)),
+        tap((languages) => this.languages.set(languages)),
+      )
   }
 }

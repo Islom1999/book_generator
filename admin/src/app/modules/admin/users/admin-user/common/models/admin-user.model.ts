@@ -1,10 +1,12 @@
 import { IBaseModel } from 'app/core/services/base.model'
-import { AdminRole } from 'app/core/user/user.types'
+import { IAdminRole } from 'app/modules/admin/users/admin-role/common/models/admin-role.model'
 
 export interface IAdminUser extends IBaseModel {
   email: string
   full_name: string
-  role: AdminRole
+  role_id: string | null
+  role: IAdminRole | null
+  is_super_admin: boolean
   is_active: boolean
   last_login_at: string | null
 }

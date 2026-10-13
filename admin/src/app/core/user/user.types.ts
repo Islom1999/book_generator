@@ -1,10 +1,13 @@
-export type AdminRole = 'super_admin' | 'moderator' | 'operator' | 'logistics' | 'finance'
+import { Permission } from 'app/core/permission/permission.catalog'
+import { Translatable } from 'app/shared/translatable/translatable'
 
 export interface User {
   id: string
   name: string
   email: string
-  role?: AdminRole
+  role?: { id: string; name: Translatable } | null
+  is_super_admin?: boolean
+  permissions?: Permission[]
   avatar?: string
   status?: string
 }

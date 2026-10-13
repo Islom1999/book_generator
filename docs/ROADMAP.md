@@ -20,7 +20,7 @@
 ## 1-bosqich — asosiy oqim
 
 Backend:
-- [ ] Dinamik admin rollari va ruxsatlar katalogi (`AdminRole` enum o'rniga), admin panelda rollar sahifasi
+- [x] Dinamik admin rollari va ruxsatlar katalogi (`AdminRole` enum o'rniga), admin panelda rollar sahifasi
 - [ ] Fayl storage (MinIO/S3), signed URL, watermark
 - [ ] Kitob shablonlari: `book_templates`, `template_pages`, `book_formats`
 - [ ] Bola profillari, surat yuklash va sifat tekshiruvi
@@ -30,7 +30,7 @@ Backend:
 - [ ] Ledger balans (to'lov tizimisiz: admin qo'lda to'ldiradi, audit bilan)
 - [ ] Moderatsiya API: sahifani qayta generatsiya qilish, matnni tahrirlash, tasdiqlash yoki rad etish
 - [ ] Telegram bot: deep-link login, telefon ulashish, status bildirishnomalari
-- [ ] Audit log
+- [x] Audit log (admin CRUD avtomatik; domen amallari `writeAudit` bilan), admin panelda audit jurnali
 
 Admin:
 - [ ] Shablon konstruktori (sahifalar, til va jins variantlari, preview)

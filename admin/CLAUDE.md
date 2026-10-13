@@ -10,7 +10,9 @@ a different UI kit or state library.
   `src/app/modules/admin/index.ts` (`adminRoutes`).
 - `src/app/core/navigation/navigation.ts` — `adminNavigation`; titles are
   Transloco keys (`nav.*`), translated by `NavigationService`.
-- `src/app/core/auth/` — sign-in against `admin/auth/sign-in`; user has `role`.
+- `src/app/core/auth/` — sign-in against `admin/auth/sign-in`; user has `role`, `is_super_admin`, `permissions`.
+- `src/app/core/permission/` — permission keys (mirror of the API catalog), `PermissionService.hasAny()`,
+  `permissionGuard(...)` for routes; menu items carry `meta: { permissions }`.
 - `src/app/core/languages/content-languages.service.ts` — active content
   languages from the API (signal), loaded in `app.resolvers.ts`.
 - `src/app/shared/translatable/translatable.ts` — `Translatable`,

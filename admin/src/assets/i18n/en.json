@@ -9,7 +9,10 @@
     "districts": "Districts",
     "postOffices": "Post offices",
     "languages": "Languages",
-    "settings": "Settings"
+    "settings": "Settings",
+    "roles": "Roles",
+    "system": "System",
+    "audit": "Audit log"
   },
   "form": {
     "validation": {
@@ -37,7 +40,11 @@
       "sortOrder": "Sort order",
       "createdAt": "Created",
       "deleteTitle": "Confirm deletion",
-      "deleteMessage": "Move “{{name}}” to the archive? It can be restored later."
+      "deleteMessage": "Move “{{name}}” to the archive? It can be restored later.",
+      "updatedAt": "Updated",
+      "loadError": "Could not load data",
+      "loading": "Loading…",
+      "close": "Close"
     },
     "grid": {
       "noData": "No data",
@@ -52,13 +59,6 @@
         "exportCsv": "Export CSV",
         "exportExcel": "Export Excel"
       }
-    },
-    "roles": {
-      "super_admin": "Super admin",
-      "moderator": "Moderator",
-      "operator": "Operator",
-      "logistics": "Logistics",
-      "finance": "Finance"
     },
     "language": {
       "title": "Languages",
@@ -133,7 +133,8 @@
         "role": "Role",
         "password": "Password",
         "newPassword": "New password (to change)",
-        "last_login_at": "Last login"
+        "last_login_at": "Last login",
+        "is_super_admin": "Super admin"
       }
     },
     "customer": {
@@ -148,6 +149,76 @@
         "is_blocked": "Blocked",
         "last_login_at": "Last login"
       }
+    },
+    "adminRole": {
+      "title": "Roles",
+      "addNew": "Add role",
+      "edit": "Edit role",
+      "create": "New role",
+      "fields": {
+        "description": "Description",
+        "permissions": "Permissions"
+      }
+    },
+    "auditLog": {
+      "title": "Audit log",
+      "detail": "Action details",
+      "system": "System",
+      "noChanges": "No field changes",
+      "addNew": "—",
+      "fields": {
+        "created_at": "Time",
+        "admin": "Admin",
+        "action": "Action",
+        "entity": "Table",
+        "entity_id": "Record ID",
+        "ip": "IP",
+        "field": "Field",
+        "before": "Before",
+        "after": "After"
+      }
     }
+  },
+  "permissionGroups": {
+    "admins": "Admins",
+    "references": "References",
+    "customers": "Customers",
+    "catalog": "Catalog",
+    "orders": "Orders",
+    "moderation": "Moderation",
+    "print": "Print and shipping",
+    "finance": "Finance",
+    "other": "Other"
+  },
+  "permissions": {
+    "admins.view": "View admins",
+    "admins.manage": "Manage admins",
+    "roles.manage": "Manage roles",
+    "languages.manage": "Languages",
+    "settings.manage": "Settings",
+    "addresses.manage": "Addresses (regions, districts, post offices)",
+    "customers.view": "View customers",
+    "customers.edit": "Edit customers",
+    "customers.block": "Block customers",
+    "customers.grant_trial": "Grant extra trials",
+    "templates.view": "View templates",
+    "templates.manage": "Manage templates",
+    "formats.manage": "Book formats",
+    "orders.view": "View orders",
+    "orders.cancel": "Cancel orders",
+    "orders.hold": "Put orders on hold",
+    "moderation.review": "Review pages",
+    "moderation.regenerate": "Regenerate pages",
+    "moderation.edit_text": "Edit text",
+    "print.manage": "Manage printing",
+    "print.download": "Download print files",
+    "shipping.manage": "Manage shipping",
+    "wallet.view": "View wallets",
+    "wallet.adjust": "Top up and adjust wallets",
+    "wallet.withdraw": "Withdraw funds",
+    "payments.view": "View payments",
+    "reports.finance": "Finance reports",
+    "dashboard.view": "Dashboard",
+    "audit.view": "Audit log"
   }
 }

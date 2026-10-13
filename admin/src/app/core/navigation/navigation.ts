@@ -2,7 +2,8 @@ import { FuseNavigationItem } from '@fuse/components/navigation'
 
 /**
  * Admin menu. Titles are translation keys; `NavigationService` translates
- * them for the active language.
+ * them for the active language and hides items whose `meta.permissions`
+ * (any of) the admin lacks. Groups left empty are hidden too.
  */
 export const adminNavigation: FuseNavigationItem[] = [
   {
@@ -23,6 +24,7 @@ export const adminNavigation: FuseNavigationItem[] = [
         type: 'basic',
         icon: 'heroicons_outline:users',
         link: '/users/customers',
+        meta: { permissions: ['customers.view'] },
       },
       {
         id: 'users.admins',
@@ -30,6 +32,15 @@ export const adminNavigation: FuseNavigationItem[] = [
         type: 'basic',
         icon: 'heroicons_outline:shield-check',
         link: '/users/admins',
+        meta: { permissions: ['admins.view', 'admins.manage'] },
+      },
+      {
+        id: 'users.roles',
+        title: 'nav.roles',
+        type: 'basic',
+        icon: 'heroicons_outline:key',
+        link: '/users/roles',
+        meta: { permissions: ['roles.manage', 'admins.view', 'admins.manage'] },
       },
     ],
   },
@@ -44,6 +55,7 @@ export const adminNavigation: FuseNavigationItem[] = [
         type: 'basic',
         icon: 'heroicons_outline:map',
         link: '/reference/regions',
+        meta: { permissions: ['addresses.manage'] },
       },
       {
         id: 'reference.districts',
@@ -51,6 +63,7 @@ export const adminNavigation: FuseNavigationItem[] = [
         type: 'basic',
         icon: 'heroicons_outline:map-pin',
         link: '/reference/districts',
+        meta: { permissions: ['addresses.manage'] },
       },
       {
         id: 'reference.post-offices',
@@ -58,6 +71,7 @@ export const adminNavigation: FuseNavigationItem[] = [
         type: 'basic',
         icon: 'heroicons_outline:building-office',
         link: '/reference/post-offices',
+        meta: { permissions: ['addresses.manage'] },
       },
       {
         id: 'reference.languages',
@@ -65,6 +79,7 @@ export const adminNavigation: FuseNavigationItem[] = [
         type: 'basic',
         icon: 'heroicons_outline:language',
         link: '/reference/languages',
+        meta: { permissions: ['languages.manage'] },
       },
       {
         id: 'reference.settings',
@@ -72,6 +87,22 @@ export const adminNavigation: FuseNavigationItem[] = [
         type: 'basic',
         icon: 'heroicons_outline:cog-6-tooth',
         link: '/reference/settings',
+        meta: { permissions: ['settings.manage'] },
+      },
+    ],
+  },
+  {
+    id: 'system',
+    title: 'nav.system',
+    type: 'group',
+    children: [
+      {
+        id: 'system.audit',
+        title: 'nav.audit',
+        type: 'basic',
+        icon: 'heroicons_outline:clipboard-document-list',
+        link: '/system/audit',
+        meta: { permissions: ['audit.view'] },
       },
     ],
   },

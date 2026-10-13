@@ -6,7 +6,9 @@ import { BaseTableComponent } from 'app/shared/abstracts'
 import { ButtonModule } from 'primeng/button'
 import { DialogService } from 'primeng/dynamicdialog'
 import { AdminUserGridService, IAdminUser } from '../../common'
-import { ROLE_OPTIONS } from 'app/core/user/roles'
+import { PermissionService } from 'app/core/permission/permission.service'
+import { AdminRoleService } from 'app/modules/admin/users/admin-role/common/services/admin-role.service'
+import { pickTranslation } from 'app/shared/translatable/translatable'
 import { AdminUserFormComponent } from '../admin-user-form/admin-user-form.component'
 
 @Component({
@@ -21,7 +23,7 @@ import { AdminUserFormComponent } from '../admin-user-form/admin-user-form.compo
 export class AdminUserListComponent extends BaseTableComponent<IAdminUser> {
   gridService = inject(AdminUserGridService)
   formComponent = AdminUserFormComponent
-  showAddButton = true
+  showAddButton = inject(PermissionService).hasAny('admins.manage')
 
   filterConfig: ITableFilterConfig = {
     columns: 3,
@@ -30,11 +32,14 @@ export class AdminUserListComponent extends BaseTableComponent<IAdminUser> {
       { key: 'full_name', type: 'input', label: 'admin.adminUser.fields.full_name' },
       { key: 'email', type: 'input', label: 'admin.adminUser.fields.email' },
       {
-        key: 'role',
+        key: 'role_id',
         type: 'select',
         label: 'admin.adminUser.fields.role',
-        options: ROLE_OPTIONS,
-        props: { translateSelectOptions: true },
+        props: {
+          options: inject(AdminRoleService).selectOptions((role) =>
+            pickTranslation(role.name, this.transloco.getActiveLang()),
+          ),
+        },
       },
     ],
   }
@@ -42,7 +47,12 @@ export class AdminUserListComponent extends BaseTableComponent<IAdminUser> {
   columns: IColumn[] = [
     { field: 'full_name', header: 'admin.adminUser.fields.full_name' },
     { field: 'email', header: 'admin.adminUser.fields.email' },
-    { field: 'role', header: 'admin.adminUser.fields.role' },
+    { field: 'role.name', header: 'admin.adminUser.fields.role', template: 'translate' },
+    {
+      field: 'is_super_admin',
+      header: 'admin.adminUser.fields.is_super_admin',
+      template: 'boolean',
+    },
     { field: 'is_active', header: 'admin.common.isActive', template: 'boolean' },
     { field: 'last_login_at', header: 'admin.adminUser.fields.last_login_at', template: 'date' },
   ]

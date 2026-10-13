@@ -4,7 +4,7 @@
 
     <form-action-buttons
       [isEditMode]="isEditMode"
-      [isFormValid]="form.valid"
+      [isFormValid]="form.valid && canManage"
       [showDelete]="showDelete"
       (delete)="onDelete()"
       (cancel)="onCancel()"

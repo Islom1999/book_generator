@@ -9,7 +9,10 @@
     "districts": "Районы",
     "postOffices": "Почтовые отделения",
     "languages": "Языки",
-    "settings": "Настройки"
+    "settings": "Настройки",
+    "roles": "Роли",
+    "system": "Система",
+    "audit": "Журнал аудита"
   },
   "form": {
     "validation": {
@@ -37,7 +40,11 @@
       "sortOrder": "Порядок",
       "createdAt": "Создан",
       "deleteTitle": "Подтвердите удаление",
-      "deleteMessage": "Переместить «{{name}}» в архив? Его можно будет восстановить."
+      "deleteMessage": "Переместить «{{name}}» в архив? Его можно будет восстановить.",
+      "updatedAt": "Обновлено",
+      "loadError": "Не удалось загрузить данные",
+      "loading": "Загрузка…",
+      "close": "Закрыть"
     },
     "grid": {
       "noData": "Нет данных",
@@ -52,13 +59,6 @@
         "exportCsv": "Экспорт CSV",
         "exportExcel": "Экспорт Excel"
       }
-    },
-    "roles": {
-      "super_admin": "Супер админ",
-      "moderator": "Модератор",
-      "operator": "Оператор",
-      "logistics": "Логистика",
-      "finance": "Финансы"
     },
     "language": {
       "title": "Языки",
@@ -133,7 +133,8 @@
         "role": "Роль",
         "password": "Пароль",
         "newPassword": "Новый пароль (для смены)",
-        "last_login_at": "Последний вход"
+        "last_login_at": "Последний вход",
+        "is_super_admin": "Супер админ"
       }
     },
     "customer": {
@@ -148,6 +149,76 @@
         "is_blocked": "Заблокирован",
         "last_login_at": "Последний вход"
       }
+    },
+    "adminRole": {
+      "title": "Роли",
+      "addNew": "Добавить роль",
+      "edit": "Редактировать роль",
+      "create": "Новая роль",
+      "fields": {
+        "description": "Описание",
+        "permissions": "Разрешения"
+      }
+    },
+    "auditLog": {
+      "title": "Журнал аудита",
+      "detail": "Детали действия",
+      "system": "Система",
+      "noChanges": "Нет изменений полей",
+      "addNew": "—",
+      "fields": {
+        "created_at": "Время",
+        "admin": "Админ",
+        "action": "Действие",
+        "entity": "Таблица",
+        "entity_id": "ID записи",
+        "ip": "IP",
+        "field": "Поле",
+        "before": "До",
+        "after": "После"
+      }
     }
+  },
+  "permissionGroups": {
+    "admins": "Админы",
+    "references": "Справочники",
+    "customers": "Клиенты",
+    "catalog": "Каталог",
+    "orders": "Заказы",
+    "moderation": "Модерация",
+    "print": "Печать и доставка",
+    "finance": "Финансы",
+    "other": "Прочее"
+  },
+  "permissions": {
+    "admins.view": "Просмотр админов",
+    "admins.manage": "Управление админами",
+    "roles.manage": "Управление ролями",
+    "languages.manage": "Языки",
+    "settings.manage": "Настройки",
+    "addresses.manage": "Адреса (области, районы, почта)",
+    "customers.view": "Просмотр клиентов",
+    "customers.edit": "Редактирование клиентов",
+    "customers.block": "Блокировка клиентов",
+    "customers.grant_trial": "Выдача доп. пробных",
+    "templates.view": "Просмотр шаблонов",
+    "templates.manage": "Управление шаблонами",
+    "formats.manage": "Форматы книг",
+    "orders.view": "Просмотр заказов",
+    "orders.cancel": "Отмена заказа",
+    "orders.hold": "Приостановка заказа",
+    "moderation.review": "Проверка страниц",
+    "moderation.regenerate": "Перегенерация",
+    "moderation.edit_text": "Редактирование текста",
+    "print.manage": "Управление печатью",
+    "print.download": "Скачивание файлов печати",
+    "shipping.manage": "Управление доставкой",
+    "wallet.view": "Просмотр балансов",
+    "wallet.adjust": "Пополнение и корректировка баланса",
+    "wallet.withdraw": "Вывод средств",
+    "payments.view": "Просмотр платежей",
+    "reports.finance": "Финансовые отчёты",
+    "dashboard.view": "Дашборд",
+    "audit.view": "Журнал аудита"
   }
 }
