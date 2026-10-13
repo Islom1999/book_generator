@@ -7,6 +7,7 @@ import { DatabaseModule } from '@app/database';
 import { AdminAuthModule } from './auth/admin/admin-auth.module.js';
 import { AuthModule } from './auth/client/auth.module.js';
 import { validateEnv } from './config/env.js';
+import { MediaModule } from './core/media/media.module.js';
 import { HealthController } from './health/health.controller.js';
 import { AdminModule } from './modules/admin/admin.module.js';
 import { ClientModule } from './modules/client/client.module.js';
@@ -23,6 +24,7 @@ import { ClientModule } from './modules/client/client.module.js';
       }),
     }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    MediaModule,
     AdminAuthModule,
     AuthModule,
     AdminModule,

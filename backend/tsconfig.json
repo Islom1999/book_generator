@@ -24,7 +24,9 @@
       "@app/entities": ["./libs/entities/src/index.ts"],
       "@app/entities/*": ["./libs/entities/src/*"],
       "@app/queues": ["./libs/queues/src/index.ts"],
-      "@app/queues/*": ["./libs/queues/src/*"]
+      "@app/queues/*": ["./libs/queues/src/*"],
+      "@app/storage": ["./libs/storage/src/index.ts"],
+      "@app/storage/*": ["./libs/storage/src/*"]
     }
   },
   "include": ["apps/**/*", "libs/**/*"],

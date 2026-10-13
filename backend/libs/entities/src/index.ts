@@ -6,6 +6,7 @@ import { Language } from './language.entity.js';
 import { PostOffice } from './post-office.entity.js';
 import { Region } from './region.entity.js';
 import { Setting } from './setting.entity.js';
+import { StoredFile } from './stored-file.entity.js';
 import { User } from './user.entity.js';
 import { UserIdentity } from './user-identity.entity.js';
 
@@ -19,6 +20,8 @@ export * from './language.entity.js';
 export * from './post-office.entity.js';
 export * from './region.entity.js';
 export * from './setting.entity.js';
+export * from './setting-keys.js';
+export * from './stored-file.entity.js';
 export * from './user.entity.js';
 export * from './user-identity.entity.js';
 
@@ -32,6 +35,7 @@ export const ENTITIES = [
   PostOffice,
   Region,
   Setting,
+  StoredFile,
   User,
   UserIdentity,
 ];

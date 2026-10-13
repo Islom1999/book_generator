@@ -3,7 +3,7 @@ import { CostumBaseEntity } from './base.entity.js';
 
 /**
  * Runtime-editable settings (prices, trial limits, AI budget...).
- * Keys are defined in `@app/common` `SettingKey`.
+ * Keys and defaults: `SETTING_DEFAULTS` in `setting-keys.ts`.
  */
 @Entity('settings')
 export class Setting extends CostumBaseEntity {
