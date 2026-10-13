@@ -1,13 +1,13 @@
-import { Column, Entity, Index } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  type Relation,
+} from 'typeorm';
+import { AdminRole } from './admin-role.entity.js';
 import { CostumBaseEntity } from './base.entity.js';
-
-export enum AdminRole {
-  SUPER_ADMIN = 'super_admin',
-  MODERATOR = 'moderator',
-  OPERATOR = 'operator',
-  LOGISTICS = 'logistics',
-  FINANCE = 'finance',
-}
 
 @Entity('admin_users')
 export class AdminUser extends CostumBaseEntity {
@@ -21,8 +21,16 @@ export class AdminUser extends CostumBaseEntity {
   @Column({ type: 'varchar', length: 255 })
   full_name: string;
 
-  @Column({ type: 'enum', enum: AdminRole, default: AdminRole.OPERATOR })
-  role: AdminRole;
+  /** Passes every permission check. At least one active super admin always exists. */
+  @Column({ type: 'boolean', default: false })
+  is_super_admin: boolean;
+
+  @Column({ type: 'uuid', nullable: true })
+  role_id: string | null;
+
+  @ManyToOne(() => AdminRole, { onDelete: 'RESTRICT', nullable: true })
+  @JoinColumn({ name: 'role_id' })
+  role: Relation<AdminRole> | null;
 
   @Column({ type: 'boolean', default: true })
   is_active: boolean;

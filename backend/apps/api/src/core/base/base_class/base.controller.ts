@@ -11,6 +11,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import type { CostumBaseEntity } from '@app/entities';
+import { ReadRoute } from '../../../common/decorators/auth.decorator.js';
 import { PrimeTableQuerySwaggerDTO } from '../base.interface.js';
 import type { BaseAdminService } from './base.service.js';
 
@@ -37,7 +38,8 @@ const bodyValidation = new ValidationPipe({
  *
  * Subclasses return their DTO classes from `dtoClassCreate()` and
  * `dtoClassUpdate()`; request bodies are validated against them here.
- * Guards (`@AdminAuth`) go on the subclass.
+ * Guards (`@AdminAuth`, optionally `@AdminReadAuth` for the read-only
+ * routes) go on the subclass.
  */
 export abstract class BaseAdminController<
   M extends CostumBaseEntity,
@@ -59,23 +61,27 @@ export abstract class BaseAdminController<
   }
 
   @Get()
+  @ReadRoute()
   findAll() {
     return this.service.findAll();
   }
 
   @Post('pagination')
+  @ReadRoute()
   @HttpCode(200)
   findAllPaginationPost(@Body() query: PrimeTableQuerySwaggerDTO) {
     return this.service.findAllPaginationPost(query);
   }
 
   @Post('pagination/archive')
+  @ReadRoute()
   @HttpCode(200)
   findAllPaginationArchive(@Body() query: PrimeTableQuerySwaggerDTO) {
     return this.service.findAllPaginationPost(query, true);
   }
 
   @Get('archive/:id')
+  @ReadRoute()
   findOneArchive(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.findOne(id, true);
   }
@@ -86,6 +92,7 @@ export abstract class BaseAdminController<
   }
 
   @Get(':id')
+  @ReadRoute()
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.findOne(id);
   }

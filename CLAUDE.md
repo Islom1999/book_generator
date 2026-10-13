@@ -59,11 +59,11 @@ Use the `verify` skill before saying work is done.
 - Translatable text is `jsonb` `{ uz, ru, en, ... }` (`Translatable`);
   languages are dynamic (`languages` table) — never hard-code the list.
 - Customer-facing APIs never expose full-resolution images or print files.
-- Admin endpoints live under `/api/admin/*` with `@AdminAuth(...)`; customer
-  endpoints use `@UserAuth()`. Admin access is moving to **dynamic
-  permissions** (BUSINESS_LOGIC §9): new endpoints are guarded by a permission
-  key (`orders.cancel`), not a role name. Until that lands, map the permission
-  to the closest current `AdminRole` and leave a `// permission: <key>` comment.
+- Admin endpoints live under `/api/admin/*` with `@AdminAuth('<permission.key>')`
+  (dynamic roles, BUSINESS_LOGIC §9; keys in `apps/api/src/core/permission/permission.catalog.ts`);
+  never check role names. Customer endpoints use `@UserAuth()`.
+- Every admin write is audit-logged: base CRUD does it automatically; domain
+  actions call `writeAudit(manager, …)` inside their transaction.
 - Every screen follows the `ui-ux` skill (mobile and desktop, all states) and
   is checked with its screenshot script before it's called done.
 - Secrets only in `.env` (git-ignored). Don't print or commit them.

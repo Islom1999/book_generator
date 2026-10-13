@@ -45,14 +45,17 @@ a feature — extend the base instead of patching the module.
    @ApiTags('admin / <plural>')
    @ApiBearerAuth()
    @Controller('admin/<plural-kebab>')
-   @AdminAuth(AdminRole.OPERATOR) // permission: addresses.manage
+   @AdminAuth('addresses.manage')
+   @AdminReadAuth('orders.view') // optional: extra keys for list/detail only
    export class XsController extends BaseAdminController<X, CreateXDto, UpdateXDto> {
      constructor(service: XsService) { super(service); }
      protected dtoClassCreate() { return CreateXDto; }
      protected dtoClassUpdate() { return UpdateXDto; }
    }
    ```
-   Pick the permission key from BUSINESS_LOGIC §9 (add a key there if none fits).
+   Pick the permission key from BUSINESS_LOGIC §9. A new key goes into
+   `apps/api/src/core/permission/permission.catalog.ts`, BUSINESS_LOGIC §9 and the
+   admin i18n (`permissions.<key>`). Writes through the base are audit-logged automatically.
    If some base routes must not exist (no create/delete), write explicit routes
    without extending the base (see `modules/admin/customers`).
 6. **Module** — `<plural>.module.ts` (`TypeOrmModule.forFeature([X])`, controller,

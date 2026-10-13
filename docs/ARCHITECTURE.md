@@ -122,13 +122,22 @@ va admin hali faolligini tekshiradi. Birinchi super admin `.env` dagi
 
 Admin huquqlari **ruxsatlarga asoslangan** va dinamik (BUSINESS_LOGIC.md, 9-bo'lim):
 `admin_roles` jadvalidagi rollar ruxsat kalitlari ro'yxatini saqlaydi, endpoint
-esa ruxsat kalitini tekshiradi (`@AdminAuth('orders.cancel')`). Ruxsatlar har
-so'rovda bazadan (kesh bilan) o'qiladi, shuning uchun o'zgarish darhol kuchga kiradi.
+esa ruxsat kalitini tekshiradi (`@AdminAuth('orders.cancel')`). Ruxsatlar
+tokenga yozilmaydi: `AdminAuthGuard` har so'rovda admin va rolini bazadan
+o'qiydi, shuning uchun bloklash yoki rolni o'zgartirish darhol kuchga kiradi.
 
-Hozirgi kod (0-bosqich) hali qat'iy `AdminRole` enum bilan ishlaydi
-(`super_admin`, `moderator`, `operator`, `logistics`, `finance`). 1-bosqichda
-`admin_roles` + ruxsatlar katalogiga ko'chiriladi; mavjud rollar seed sifatida
-saqlanadi.
+- Katalog: `apps/api/src/core/permission/permission.catalog.ts`
+  (`GET /api/admin/permissions` guruhlab qaytaradi).
+- `@AdminAuth(...keys)` — kalitlardan biri yetarli; `@AdminReadAuth(...keys)` —
+  faqat o'qish route'lariga (ro'yxat, karta) qo'shimcha kalitlar;
+  `@Permissions(...)` — bitta metod uchun kalitlarni almashtiradi;
+  `assertPermission(key)` — DTO maydoni darajasidagi tekshiruv
+  (masalan, `is_blocked` uchun `customers.block`).
+- So'rov konteksti (`core/context/request-context.ts`, AsyncLocalStorage):
+  joriy admin, uning ruxsatlari va IP.
+- Audit: `core/audit/audit.ts` `writeAudit(manager, …)`. `BaseAdminService`
+  create/update/delete/restore'ni avtomatik yozadi (o'zgargan maydonlar,
+  parollar `***`). Ko'rish: `POST /api/admin/audit-logs/pagination` (`audit.view`).
 
 **Mijozlar.** `POST /api/auth/telegram` (Login Widget, HMAC tekshiruvi) va
 `POST /api/auth/google` (ID token tekshiruvi). Birinchi kirishda `users` va

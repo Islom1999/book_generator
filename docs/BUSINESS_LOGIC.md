@@ -304,7 +304,16 @@ ularga ruxsatlarni belgilaydi. Kodda faqat ruxsatlar katalogi qat'iy
 - Adminga bitta rol biriktiriladi (taklif: keyinchalik bir nechta).
 - `is_super_admin` belgili admin har qanday tekshiruvdan o'tadi. Kamida bitta
   faol super admin doim qoladi (oxirgisini o'chirib yoki bloklab bo'lmaydi).
-- Admin o'ziga ruxsat qo'sha olmaydi (o'z rolini tahrirlay olmaydi).
+- Admin o'ziga ruxsat qo'sha olmaydi: o'z rolini tahrirlay olmaydi, o'z rolini,
+  super admin belgisini va faolligini o'zgartira olmaydi, o'zini o'chira olmaydi.
+- Admin boshqalarga faqat o'zida bor ruxsatlarni bera oladi: rol yaratishda
+  yoki tahrirlashda va adminga rol biriktirishda (rolning hamma ruxsatlari
+  unda bo'lishi kerak). Super admin belgisini faqat super admin qo'yadi va
+  super adminlarni faqat super admin tahrirlaydi.
+- Adminlar biriktirilgan rolni o'chirib bo'lmaydi; rolni o'chirib qo'yish
+  (`is_active = false`) uning hamma ruxsatlarini darhol olib qo'yadi.
+- Mijozni bloklash uchun `customers.block`, boshqa maydonlar uchun
+  `customers.edit` kerak.
 - Rol yoki ruxsat o'zgarishi darhol kuchga kiradi (har so'rovda tekshiriladi,
   tokenga yozilmaydi) va audit'ga tushadi.
 - Admin panel menyusi va tugmalari ruxsatlarga qarab ko'rsatiladi.

@@ -5,20 +5,39 @@ import {
   SetMetadata,
   UseGuards,
 } from '@nestjs/common';
-import type { AdminRole } from '@app/entities';
+import type { Permission } from '../../core/permission/permission.catalog.js';
 import {
-  ADMIN_ROLES_KEY,
+  ADMIN_PERMISSIONS_KEY,
+  ADMIN_READ_PERMISSIONS_KEY,
   AdminAuthGuard,
+  READ_ROUTE_KEY,
   UserAuthGuard,
 } from '../guards/auth.guard.js';
 import type { JwtPayload } from '../interfaces/jwt-payload.interface.js';
 
-/** Requires an admin token; with roles, also one of those roles (super_admin always passes). */
-export const AdminAuth = (...roles: AdminRole[]) =>
+/**
+ * Requires an admin token and any of the given permission keys (none = any
+ * active admin). On a method it overrides the class-level keys.
+ */
+export const AdminAuth = (...permissions: Permission[]) =>
   applyDecorators(
-    SetMetadata(ADMIN_ROLES_KEY, roles),
+    SetMetadata(ADMIN_PERMISSIONS_KEY, permissions),
     UseGuards(AdminAuthGuard),
   );
+
+/** Method-level keys replacing the class-level `@AdminAuth` keys (no second guard). */
+export const Permissions = (...permissions: Permission[]) =>
+  SetMetadata(ADMIN_PERMISSIONS_KEY, permissions);
+
+/**
+ * Extra keys that also open the read-only routes (list, detail) of a
+ * controller, e.g. `admins.view` next to `@AdminAuth('admins.manage')`.
+ */
+export const AdminReadAuth = (...permissions: Permission[]) =>
+  SetMetadata(ADMIN_READ_PERMISSIONS_KEY, permissions);
+
+/** Marks a route as read-only so `AdminReadAuth` keys apply to it. */
+export const ReadRoute = () => SetMetadata(READ_ROUTE_KEY, true);
 
 /** Requires a customer token. */
 export const UserAuth = () => UseGuards(UserAuthGuard);

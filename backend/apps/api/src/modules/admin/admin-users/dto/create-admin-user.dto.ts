@@ -1,10 +1,9 @@
-import { AdminRole } from '@app/entities';
 import {
   IsBoolean,
   IsEmail,
-  IsEnum,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
   MinLength,
 } from 'class-validator';
@@ -21,8 +20,14 @@ export class CreateAdminUserDto {
   @Length(2, 255)
   full_name: string;
 
-  @IsEnum(AdminRole)
-  role: AdminRole;
+  @IsOptional()
+  @IsUUID()
+  role_id?: string | null;
+
+  /** Only a super admin can set it. */
+  @IsOptional()
+  @IsBoolean()
+  is_super_admin?: boolean;
 
   @IsOptional()
   @IsBoolean()

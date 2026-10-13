@@ -7,7 +7,8 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { AdminRole, AdminUser } from '@app/entities';
+import { AdminUser } from '@app/entities';
+import { PERMISSIONS } from '../../core/permission/permission.catalog.js';
 import type { AdminJwtPayload } from '../../common/index.js';
 import bcrypt from 'bcryptjs';
 import { Repository } from 'typeorm';
@@ -38,7 +39,7 @@ export class AdminAuthService implements OnApplicationBootstrap {
         email: email.toLowerCase(),
         password_hash: await bcrypt.hash(password, 12),
         full_name: 'Super Admin',
-        role: AdminRole.SUPER_ADMIN,
+        is_super_admin: true,
       }),
     );
     this.logger.log(`Created first super admin ${email}`);
@@ -71,15 +72,22 @@ export class AdminAuthService implements OnApplicationBootstrap {
   }
 
   private async session(adminId: string) {
-    const admin = await this.admins.findOneBy({ id: adminId, is_active: true });
+    const admin = await this.admins.findOne({
+      where: { id: adminId, is_active: true },
+      relations: { role: true },
+    });
     if (!admin) {
       throw new UnauthorizedException();
     }
     const payload: AdminJwtPayload = {
       sub: admin.id,
       kind: 'admin',
-      role: admin.role,
     };
+    const permissions = admin.is_super_admin
+      ? [...PERMISSIONS]
+      : admin.role?.is_active
+        ? admin.role.permissions
+        : [];
     return {
       accessToken: await this.jwt.signAsync(payload, {
         expiresIn: this.config.get('ADMIN_JWT_EXPIRES_IN', '12h'),
@@ -88,7 +96,10 @@ export class AdminAuthService implements OnApplicationBootstrap {
         id: admin.id,
         name: admin.full_name,
         email: admin.email,
-        role: admin.role,
+        role: admin.role ? { id: admin.role.id, name: admin.role.name } : null,
+        is_super_admin: admin.is_super_admin,
+        // For showing menus and buttons only; the API checks on every request.
+        permissions,
         status: 'online',
       },
     };

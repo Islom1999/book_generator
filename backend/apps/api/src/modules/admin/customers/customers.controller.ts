@@ -9,8 +9,7 @@ import {
   Put,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { AdminRole } from '@app/entities';
-import { AdminAuth } from '../../../common/index.js';
+import { AdminAuth, Permissions } from '../../../common/index.js';
 import { PrimeTableQuerySwaggerDTO } from '../../../core/base/base.interface.js';
 import { CustomersService } from './customers.service.js';
 import { UpdateCustomerDto } from './dto/update-customer.dto.js';
@@ -22,7 +21,7 @@ import { UpdateCustomerDto } from './dto/update-customer.dto.js';
 @ApiTags('admin / customers')
 @ApiBearerAuth()
 @Controller('admin/users')
-@AdminAuth(AdminRole.OPERATOR, AdminRole.FINANCE) // permission: customers.view, customers.edit
+@AdminAuth('customers.view')
 export class CustomersController {
   constructor(private readonly service: CustomersService) {}
 
@@ -38,6 +37,7 @@ export class CustomersController {
   }
 
   @Put(':id')
+  @Permissions('customers.edit', 'customers.block')
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateCustomerDto,

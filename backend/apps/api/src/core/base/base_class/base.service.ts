@@ -2,6 +2,8 @@ import { NotFoundException } from '@nestjs/common';
 import type { CostumBaseEntity } from '@app/entities';
 import type {
   DeepPartial,
+  EntityManager,
+  FindOptionsWhere,
   ObjectLiteral,
   Repository,
   SelectQueryBuilder,
@@ -12,6 +14,7 @@ import type {
   SortOption,
   TableFilterRule,
 } from '../base.interface.js';
+import { auditSnapshot, writeAudit } from '../../audit/audit.js';
 import {
   ALIAS,
   applyNestedJoins,
@@ -46,10 +49,14 @@ export abstract class BaseAdminService<
   ) {}
 
   async create(dto: D): Promise<M> {
-    const saved = await this.repository.save(
-      this.repository.create(dto as unknown as DeepPartial<M>),
-    );
-    return this.findOne(saved.id);
+    const id = await this.repository.manager.transaction(async (manager) => {
+      const saved = await manager.save(
+        this.repository.create(dto as unknown as DeepPartial<M>),
+      );
+      await this.audit(manager, 'create', saved.id, null, saved);
+      return saved.id;
+    });
+    return this.findOne(id);
   }
 
   findAll(): Promise<M[]> {
@@ -88,25 +95,64 @@ export abstract class BaseAdminService<
   }
 
   async update(id: string, dto: U): Promise<M> {
-    const entity = await this.findOne(id);
+    await this.findOne(id);
+    // Loaded without relations: a joined relation object would win over a
+    // changed foreign key column (`role` over `role_id`) on save.
+    const entity = await this.repository.findOneByOrFail({
+      id,
+    } as FindOptionsWhere<M>);
+    const keys = Object.keys(dto);
+    const before = auditSnapshot(entity, keys);
     // DTOs are validated against the entity's columns, so they are partial entities.
     this.repository.merge(entity, dto as unknown as DeepPartial<M>);
-    await this.repository.save(entity);
+    await this.repository.manager.transaction(async (manager) => {
+      await manager.save(entity);
+      await this.audit(
+        manager,
+        'update',
+        id,
+        before,
+        auditSnapshot(entity, keys),
+      );
+    });
     return this.findOne(id);
   }
 
   /** Soft delete: the record moves to the archive. */
   async delete(id: string): Promise<M> {
     const entity = await this.findOne(id);
-    await this.repository.softDelete(id);
+    await this.repository.manager.transaction(async (manager) => {
+      await manager.softDelete(this.repository.target, id);
+      await this.audit(manager, 'delete', id, entity, null);
+    });
     return entity;
   }
 
   /** Restores an archived record. */
   async repair(id: string): Promise<M> {
     await this.findOne(id, true);
-    await this.repository.restore(id);
+    await this.repository.manager.transaction(async (manager) => {
+      await manager.restore(this.repository.target, id);
+      await this.audit(manager, 'restore', id, null, null);
+    });
     return this.findOne(id);
+  }
+
+  /** Every write through the base is audited with the acting admin. */
+  protected audit(
+    manager: EntityManager,
+    action: string,
+    id: string,
+    before: object | null,
+    after: object | null,
+  ) {
+    return writeAudit(manager, {
+      action,
+      entity: this.repository.metadata.tableName,
+      entity_id: id,
+      before: auditSnapshot(before),
+      after: auditSnapshot(after),
+    });
   }
 
   protected query(isArchive = false): SelectQueryBuilder<M> {

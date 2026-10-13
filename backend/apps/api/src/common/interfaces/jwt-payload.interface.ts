@@ -1,9 +1,7 @@
-import type { AdminRole } from '@app/entities';
-
+/** Permissions are not in the token: they are loaded per request. */
 export interface AdminJwtPayload {
   sub: string;
   kind: 'admin';
-  role: AdminRole;
 }
 
 export interface UserJwtPayload {
