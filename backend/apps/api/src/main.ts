@@ -9,6 +9,12 @@ import { requestContextMiddleware } from './core/context/request-context.js';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
+  // Behind nginx (and Docker's bridge) the client IP comes from X-Forwarded-For;
+  // rate limits and audit IPs need the real one.
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .set('trust proxy', process.env.TRUST_PROXY ?? 'loopback, uniquelocal');
   app.use(requestContextMiddleware);
   app.use(helmet());
   app.enableCors({

@@ -9,3 +9,7 @@ uploads
 
 # Local file storage (STORAGE_DRIVER=local)
 backend/storage/
+
+# deploy packaging
+/release/
+/release.tgz

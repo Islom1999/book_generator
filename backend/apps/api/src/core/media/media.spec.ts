@@ -64,7 +64,7 @@ describe('LocalStorageDriver', () => {
     const driver = new LocalStorageDriver(
       await mkdtemp(join(tmpdir(), 'storage-')),
     );
-    await driver.put('a/b.txt', Buffer.from('hi'), 'text/plain');
+    await driver.put('a/b.txt', Buffer.from('hi'));
     expect((await driver.get('a/b.txt')).toString()).toBe('hi');
     await expect(driver.get('../etc/passwd')).rejects.toThrow();
   });
