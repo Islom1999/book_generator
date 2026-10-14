@@ -1,0 +1,49 @@
+<ng-container *transloco="let t">
+  <header class="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-4">
+    <span class="text-xl font-bold text-brand-700">{{ t('nav.brand') }}</span>
+    <p-selectbutton
+      [options]="langOptions"
+      [ngModel]="lang"
+      (ngModelChange)="setLang($event)"
+      optionLabel="label"
+      optionValue="value"
+      size="small"
+      aria-label="Language"
+    />
+  </header>
+
+  <main class="mx-auto w-full max-w-5xl px-4">
+    <section class="py-10 text-center sm:py-20">
+      <h1 class="mx-auto max-w-3xl text-3xl font-extrabold leading-tight text-ink sm:text-5xl">
+        {{ t('hero.title') }}
+      </h1>
+      <p class="mx-auto mt-4 max-w-2xl text-base text-gray-600 sm:text-lg">
+        {{ t('hero.subtitle') }}
+      </p>
+      <div class="mt-8 flex flex-col items-center gap-2">
+        <p-button [label]="t('hero.cta')" size="large" [disabled]="true" styleClass="min-w-48" />
+        <span class="text-sm text-gray-500">{{ t('hero.soon') }}</span>
+      </div>
+    </section>
+
+    <section class="pb-16">
+      <h2 class="mb-8 text-center text-2xl font-bold text-ink">{{ t('steps.title') }}</h2>
+      <ol class="grid gap-4 sm:grid-cols-3">
+        @for (n of steps; track n) {
+          <li class="rounded-2xl border border-brand-100 bg-white p-6 shadow-sm">
+            <span
+              class="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 font-bold text-brand-700"
+              >{{ n }}</span
+            >
+            <h3 class="text-lg font-semibold text-ink">{{ t('steps.' + n + '.title') }}</h3>
+            <p class="mt-1 text-gray-600">{{ t('steps.' + n + '.text') }}</p>
+          </li>
+        }
+      </ol>
+    </section>
+  </main>
+
+  <footer class="border-t border-brand-100 py-6 text-center text-sm text-gray-500">
+    © {{ year }} {{ t('footer.rights') }}
+  </footer>
+</ng-container>

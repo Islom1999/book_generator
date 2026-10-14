@@ -78,13 +78,17 @@ export class ReplicateService {
     const genderLock = girl
       ? `The child MUST clearly be a little GIRL, never a boy. Feminine toddler face, round cheeks. Give her the same hair LENGTH and TEXTURE as the description (shoulder-length curly/coily if described that way). Do not keep a short masculine boy cut.`
       : `The child MUST clearly be a little BOY, never a girl. If the description is short or buzz-cut hair, keep it short — no long hair, no extra curls.`;
+    const sceneLine = identity.scene
+      ? `\nThis page's scene: ${identity.scene}\nEVERY character, animal, and creature named in that scene description (e.g. a wolf, grandmother, woodsman, dragon, camel, butterfly) MUST remain fully visible in the output, unchanged, in the same pose and position — even if it is large, far from the child, or not directly touching the child. Do not delete, shrink, hide, or simplify any of them.`
+      : '';
     return `Replace the child in this storybook page with a ${identity.age}-year-old ${who}.
 ${genderLock}
 Appearance: ${look}
-Keep the SAME story costume (vest, tunic, embroidery, sash), the SAME body pose and hands, and the SAME props (lantern, star, fruit, dragon).
-Keep the SAME camera, village, cobblestones, trees, lighting, and 3D storybook style.
+Keep the SAME story costume (vest, tunic, embroidery, sash), the SAME body pose and hands, and the SAME props.
+Keep the SAME camera, setting, background, lighting, and 3D storybook style.
+Keep every other character and animal already in the image exactly as they are — do not remove, replace, or redraw them.${sceneLine}
 Change only the child's HEAD: gender, face shape, and hair.
-Do not add people, do not paste a photograph, do not change the background. No text.`;
+Do not add new people, do not paste a photograph, do not change the background. No text.`;
   }
 
   private enqueue<T>(fn: () => Promise<T>): Promise<T> {

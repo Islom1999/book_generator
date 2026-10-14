@@ -26,7 +26,7 @@ messages and these Claude files are in English. `docs/` are in Uzbek.
 | --- | --- |
 | `backend/` | NestJS 12 monorepo (ESM): `apps/api`, `apps/worker`, `apps/bot`, `libs/entities`, `libs/database`, `libs/queues`. See `backend/CLAUDE.md` |
 | `admin/` | Fuse admin panel, Angular 20 + PrimeNG + Formly + Transloco. See `admin/CLAUDE.md` |
-| `client/` | Customer site (not created yet): Angular SSR + Tailwind + PrimeNG |
+| `client/` | Customer site: Angular 20 SSR + Tailwind + PrimeNG + Transloco (landing only so far) |
 | `legacy/` | Old MVP. **Read-only reference** (AI pipeline lives in `legacy/api/src/openrouter`, `replicate`, `personalizations`). Never edit or import from it |
 | `docs/` | Business logic, architecture, roadmap |
 
@@ -41,6 +41,7 @@ cd backend && npm run migration:run       # needs backend/.env (copy .env.exampl
 cd backend && npm run start:api           # :3000/api, swagger /api/docs
 cd admin && npx ng build                  # admin build check
 cd admin && npm start -- --port 4300
+cd client && npx ng build                 # client build check (SSR server: PORT=4010 node dist/client/server/server.mjs)
 ```
 
 Use the `verify` skill before saying work is done.

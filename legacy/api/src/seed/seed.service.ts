@@ -11,8 +11,9 @@ import { AJDAHO_PAGES, AJDAHO_SLUG, TemplatePage } from '../templates/ajdaho.tem
 import { ANOR_PAGES, ANOR_SLUG } from '../templates/anor.template';
 import { BAHOR_PAGES, BAHOR_SLUG } from '../templates/bahor-kapalagi.template';
 import { OY_TUYA_PAGES, OY_TUYA_SLUG } from '../templates/oy-tuya.template';
+import { QIZIL_QALPOQCHA_PAGES, QIZIL_QALPOQCHA_SLUG } from '../templates/qizil-qalpoqcha.template';
 
-const KNOWN_SLUGS = [AJDAHO_SLUG, ANOR_SLUG, OY_TUYA_SLUG, BAHOR_SLUG];
+const KNOWN_SLUGS = [AJDAHO_SLUG, ANOR_SLUG, OY_TUYA_SLUG, BAHOR_SLUG, QIZIL_QALPOQCHA_SLUG];
 
 @Injectable()
 export class SeedService implements OnModuleInit {
@@ -30,6 +31,7 @@ export class SeedService implements OnModuleInit {
     await this.seedAnor();
     await this.seedOyTuya();
     await this.seedBahor();
+    await this.seedQizilQalpoqcha();
     await this.books.update({ slug: Not(In(KNOWN_SLUGS)) }, { isActive: false });
   }
 
@@ -138,6 +140,34 @@ export class SeedService implements OnModuleInit {
       pages: BAHOR_PAGES,
     });
     this.logger.log('Template kitob tayyor: bahor-kapalagi');
+  }
+
+  private async seedQizilQalpoqcha() {
+    this.copyPages(
+      'qizil-qalpoqcha',
+      QIZIL_QALPOQCHA_PAGES,
+      join(process.cwd(), '..', 'sample-book', 'qizil-qalpoqcha'),
+    );
+    await this.upsertBook({
+      slug: QIZIL_QALPOQCHA_SLUG,
+      titleUz: 'Qizil qalpoqchali kichkintoy',
+      titleRu: 'Крошка в красной шапочке',
+      descUz: 'Jahon xalqlari ertagi. Ayyor bo‘ri va mehribon o‘rmonchi. Bolangiz — bosh qahramon.',
+      descRu: 'Сказка народов мира. Хитрый волк и добрый дровосек. Ваш ребёнок — главный герой.',
+      price: 129000,
+      ageRange: '3–6',
+      pageCount: QIZIL_QALPOQCHA_PAGES.length,
+      freePages: 3,
+      badge: 'new',
+      gender: null,
+      hue: 355,
+      emoji: '🧺',
+      themePrompt:
+        'Template: Qizil qalpoqchali kichkintoy. Classic tale, red hooded cape, forest, wolf, grandmother, woodsman. Replace the child with the uploaded photo.',
+      folder: 'qizil-qalpoqcha',
+      pages: QIZIL_QALPOQCHA_PAGES,
+    });
+    this.logger.log('Template kitob tayyor: qizil-qalpoqcha');
   }
 
   private copyPages(folder: string, pages: TemplatePage[], srcDir: string) {
